@@ -1,9 +1,13 @@
-# The Island Photographer — build 4
+# The Island Photographer — build 5
 
 Single-file web prototype of the Oone Films GDD v0.1: `index.html` (Three.js r128 from cdnjs, Google Fonts, nothing else).
 Earlier builds are kept as `v1-topdown.html` and `v2-firstperson.html`. The plan this build follows is `PLAN-build3.md`.
 
-## What build 4 adds
+## What build 5 adds
+
+- Shift to run. A persistent objective line under the HUD with the chart pin pulsing for it. A press-and-doorstep sequence for every edition, and the paper on the doormat at home. Faces, head turns, a walking Tobias, a trotting dog, chimney smoke. Daily weather: clear, fog, or rain, with rain that darkens, mists the prints, and quiets the birds.
+
+## What build 4 added
 
 - **Marit's counter.** Talk to her, then buy or sell. Spare gear and film sell at half; prints tagged sell go on her postcard rack for quiet money the paper never hears about.
 - **The angles quest** now lists each sample by name with where, when, and which page it belongs to.

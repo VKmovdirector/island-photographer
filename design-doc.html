@@ -17,7 +17,7 @@ table{border-collapse:collapse;width:100%;font:13px var(--mono)}
 th{text-align:left;font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:11px;color:var(--ink2);border-bottom:1px solid var(--ink);padding:6px 8px}
 td{border-bottom:1px solid var(--rule);padding:6px 8px;vertical-align:top;font-variant-numeric:tabular-nums}
 </style>
-<main><h1>The Island Photographer — Design Document (build 4)</h1>
+<main><h1>The Island Photographer — Design Document (build 5)</h1>
 <p>Working title. Oone Films. This document describes every mechanic in the current prototype as built, with the numbers the code uses. It follows the GDD v0.1 brief and records where the build departs from it.</p>
 <h2>1. Premise and tone</h2>
 <p>A former reporter inherits his grandfather's house on a North Atlantic island of about two thousand people. He arrives by ferry at dusk with a suitcase and a film camera. His first roll, shot at the lighthouse, holds something he did not see. The island's paper buys it. From there every publication changes the island and draws attention from a military base behind a fence, from researchers, and from men in plain sedans.</p>
@@ -37,6 +37,8 @@ td{border-bottom:1px solid var(--rule);padding:6px 8px;vertical-align:top;font-v
 <li><strong>North woods.</strong> Instanced spruce forest, the base fence with signs, a searchlight tower that sweeps once at night.</li>
 <li><strong>Aksel's boat.</strong> A moving deck at dusk or night along the base shore: hangar, fence, lights, searchlight. Reached through Aksel at trust 2.</li>
 </ul>
+<h2>4a. Weather</h2>
+<p>Rolled each morning from day 2: clear 35 percent, fog 37, rain 28. Clear brightens the sun, pushes the fog far out, and raises exposure light 15 percent. Rain darkens the sky, pulls the fog in, cuts light 30 percent, adds falling rain and a rain bed, quiets the birds, mists every outdoor print by 7 percent, and halves how often the sky object appears. The morning toast names the weather; the HUD and chart show it.</p>
 <h2>4. Clock, bands, and the day</h2>
 <p>Continuous clock from 06:00. Time costs:</p>
 <div class="tw"><table><thead><tr><th>Action</th><th>Minutes</th></tr></thead><tbody><tr><td>Travel by chart</td><td>8 + distance/14 (15 to 40)</td></tr><tr><td>Talking, per topic</td><td>5</td></tr><tr><td>Developing a roll</td><td>30</td></tr><tr><td>Wipe the lens</td><td>3</td></tr><tr><td>Eating</td><td>10</td></tr><tr><td>Waiting (watch)</td><td>as chosen</td></tr><tr><td>Field time</td><td>1 game minute per real second</td></tr><tr><td>Boat trip</td><td>50 out, 40 back</td></tr></tbody></table></div>
@@ -47,7 +49,7 @@ td{border-bottom:1px solid var(--rule);padding:6px 8px;vertical-align:top;font-v
 <h2>5. Food</h2>
 <p>A meter from 0 to 100, starting at 70, dropping 4 per hour. Eating: cupboard bread once a day (+35), Sigrún's eggs and coffee ($4, +60), coffee ($1, +15), tinned fish from Marit ($3, +40, eaten from the bag). Under 30: walking 25 percent slower and handheld shake 70 percent worse. Under 10: you cannot hold still, so the woods entity will not come. Sleep costs 10.</p>
 <h2>6. Movement and interaction</h2>
-<p>WASD walks, the mouse looks (pointer lock on click, can be turned off in settings). E uses whatever you face within about 2.5 metres. Bounds and obstacle circles keep you on the plateau, the quay, the road, the deck. Footsteps by surface, a small head bob.</p>
+<p>WASD walks, Shift runs at 1.8× with a heavier bob (running near a phenomenon counts as movement), the mouse looks (pointer lock on click, can be turned off in settings). E uses whatever you face within about 2.5 metres. Bounds and obstacle circles keep you on the plateau, the quay, the road, the deck. Footsteps by surface, a small head bob.</p>
 <h2>7. Camera and shooting</h2>
 <p>C or right click raises the camera. The view narrows to a 3:2 frame with the focal length's field of view. Autofocus settles on whatever sits under the bracket; the view softens while it hunts and the bracket turns green and tightens when it locks. Left click shoots one exposure. The wheel zooms 50 to 135 mm when the 135 is mounted. T sets the tripod (not on the boat). A light pill reads DARK, DIM, LIGHT OK, or BRIGHT.</p>
 <p><strong>Film.</strong> Rolls of 12. ISO 100 (daylight) and ISO 400 (dusk and night, grainy by day). A partly shot roll can be rewound to an exposed roll and developed.</p>
@@ -72,16 +74,16 @@ td{border-bottom:1px solid var(--rule);padding:6px 8px;vertical-align:top;font-v
 <p>Prints are black and white with paper tone, grain by ISO and light, blur by sharpness, brightness gained for correctly exposed low-light frames.</p>
 <p><strong>Enlarger crop.</strong> With the enlarger ($80), drag a 3:2 rectangle on a print. Framing is recomputed from the new subject size and position; sharpness falls by the crop factor to the power 0.7; grain grows. One crop per print.</p>
 <h2>10. The Island Courier</h2>
-<p>Halldór rates a print on the four scores and places it: composite under 40 page 6 (base $20), 40 to 69 page 3 ($40), 70 and up front page ($120). Pay = base × editor mood (0.8 to 1.3) × repeat penalty (1.0 first of a category, 0.6 second, 0.3 after, unless 25 sharper than the best sold) × (0.75 + 0.5 × composite/100). Sold prints queue for the next edition. The edition is a generated newspaper page with a headline and story by category and placement, readable later in the journal.</p>
+<p>Halldór rates a print on the four scores and places it: composite under 40 page 6 (base $20), 40 to 69 page 3 ($40), 70 and up front page ($120). Pay = base × editor mood (0.8 to 1.3) × repeat penalty (1.0 first of a category, 0.6 second, 0.3 after, unless 25 sharper than the best sold) × (0.75 + 0.5 × composite/100). Sold prints queue for the next edition. When it goes out, a short press sequence plays (the press running, the doorstep in the morning), then the generated newspaper page; the paper also lies on the doormat at home until the next edition and can be reread there. The edition is a generated newspaper page with a headline and story by category and placement, readable later in the journal.</p>
 <p>Attention per publication: page 6 +2, page 3 +5, front page +12; −4 per day without an edition. The meter appears after the first front page. At 20 (tier 1) a sedan parks by the house and the Man appears on Main street.</p>
 <h2>11. Marit's counter</h2>
 <p>Talk to Marit, choose "See what you have" or "I have something to sell." Buy: 135 mm lens $60, tripod $40, enlarger $80, ISO 400 $15, ISO 100 $8, tinned fish $3. Sell: spare gear and film at half price. Prints tagged sell go on her postcard rack for $6, $9 (sharp), or $14 (with a found anomaly). Marit's money is quiet: nothing is published and Attention does not move. This is the deck's quiet buyer.</p>
 <h2>12. People, trust, dialogue</h2>
 <p>Every named character has a greeting that changes with the story and a set of topics. Some topics need trust. Trust rises one per day on the first conversation and by giving prints (Aksel, a print of his boat). Topics can give rumors, set flags, or open the counter or the desk.</p>
 <div class="tw"><table><thead><tr><th>Name</th><th>Role</th><th>Where, by band</th></tr></thead><tbody><tr><td>Sigrún</td><td>runs the diner</td><td>Main street, Morning to Evening</td></tr><tr><td>Halldór</td><td>editor of the Courier</td><td>Main street, Morning to Evening</td></tr><tr><td>Aksel</td><td>fisherman, harbor master</td><td>Harbor, Morning, Evening, Night</td></tr><tr><td>Marit</td><td>camera shop</td><td>Shop, Morning to Evening</td></tr><tr><td>Tobias</td><td>twelve, sneaks near the base</td><td>Main street Midday and Night, woods at Evening</td></tr><tr><td>The Man</td><td>unknown</td><td>Main street after tier 1</td></tr></tbody></table></div>
-<p>Each has a distinct silhouette: Sigrún's apron, Aksel's height and rope, Tobias's size and cap, Marit's glasses, Halldór's newspaper and cane, the Man's coat. The journal's People tab keeps a portrait, role, description, trust, and notes from what they have told you.</p>
+<p>Each has a face (smile, grim, young, calm), turns their head to follow you within seven metres, and a distinct silhouette: Sigrún's apron, Aksel's height and rope, Tobias's size and cap, Marit's glasses, Halldór's newspaper and cane, the Man's coat. The journal's People tab keeps a portrait, role, description, trust, and notes from what they have told you.</p>
 <h2>13. Journal and quests</h2>
-<p>J opens the journal: Open, Done, People, Editions. Quests are data with stages, each a predicate on game state, with a hint for the current stage. Any change posts a toast and a chime.</p>
+<p>The HUD carries a persistent objective line: the current stage of the most pressing open quest with its hint, and the chart pulses the pin for that stage's place. J opens the journal: Open, Done, People, Editions. Quests are data with stages, each a predicate on game state, with a hint for the current stage. Any change posts a toast and a chime.</p>
 <ul>
 <li>The house with one lamp: sleep, read the letter, develop a roll.</li>
 <li>Before the fog lifts (Sigrún): shoot the lighthouse in the morning, develop, find the object, show Halldór.</li>
@@ -100,6 +102,7 @@ td{border-bottom:1px solid var(--rule);padding:6px 8px;vertical-align:top;font-v
 <h2>17. Aksel's boat</h2>
 <p>At trust 2, in Evening or Night, "Take me out on the water." The deck rolls, handheld shake is 2.6× worse, the tripod is not allowed. The shore moves past: the base hangar (subject rarity 30, story bonus for the fence), the fence, lights, the searchlight. The object and the harbor light can appear from the water. Ask Aksel to turn back to return.</p>
 <h2>18. Random events and life</h2>
+<p>Main street has a dog trotting its length with a two-frame leg cycle, chimney smoke on three roofs, gulls, and Tobias walking his beat between the school and the church at midday.</p>
 <p>On arriving somewhere (once per place per band, 40 percent chance) a short event may play: the dog, a stranger's folded note (a reader tip), men in good coats outside the Courier (+1 Attention), the ferry horn, chalk marks on Aksel's wheelhouse, something knocking under the quay at night, a thermos and stool left on the cliff (+1 Attention), a tourist in a yellow coat, a fox, a truck with its lights off on the fence road, an envelope under the door, the telephone that is not connected, Marit's clock that runs slow on foggy days.</p>
 <h2>19. Sound</h2>
 <p>Synthesized in WebAudio. Beds by place and hour: wind, surf, rigging creaks, trees, birds, street murmur, the house clock, a night drone. One-shots: steps, camera raise and lower, film advance, zoom ring, tripod legs, shutter, doors, pages, the press, coins, journal chime, the sedan's engine, the foghorn. Cues duck the birds or the surf. Volume and mute in settings.</p>

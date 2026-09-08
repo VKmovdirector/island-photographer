@@ -1,4 +1,4 @@
-# The Island Photographer — Design Document (build 4)
+# The Island Photographer — Design Document (build 5)
 
 Working title. Oone Films. This document describes every mechanic in the current prototype as built, with the numbers the code uses. It follows the GDD v0.1 brief and records where the build departs from it.
 
@@ -27,6 +27,10 @@ All locations are first-person 3D, low poly, cel shaded (three-step toon ramp, f
 - **Lighthouse cliff.** Plateau above the sea, the tower with a beam at dusk and night, rocks, a cairn of scratched stones, gulls, a fishing boat far out.
 - **North woods.** Instanced spruce forest, the base fence with signs, a searchlight tower that sweeps once at night.
 - **Aksel's boat.** A moving deck at dusk or night along the base shore: hangar, fence, lights, searchlight. Reached through Aksel at trust 2.
+
+## 4a. Weather
+
+Rolled each morning from day 2: clear 35 percent, fog 37, rain 28. Clear brightens the sun, pushes the fog far out, and raises exposure light 15 percent. Rain darkens the sky, pulls the fog in, cuts light 30 percent, adds falling rain and a rain bed, quiets the birds, mists every outdoor print by 7 percent, and halves how often the sky object appears. The morning toast names the weather; the HUD and chart show it.
 
 ## 4. Clock, bands, and the day
 
@@ -57,7 +61,7 @@ A meter from 0 to 100, starting at 70, dropping 4 per hour. Eating: cupboard bre
 
 ## 6. Movement and interaction
 
-WASD walks, the mouse looks (pointer lock on click, can be turned off in settings). E uses whatever you face within about 2.5 metres. Bounds and obstacle circles keep you on the plateau, the quay, the road, the deck. Footsteps by surface, a small head bob.
+WASD walks, Shift runs at 1.8× with a heavier bob (running near a phenomenon counts as movement), the mouse looks (pointer lock on click, can be turned off in settings). E uses whatever you face within about 2.5 metres. Bounds and obstacle circles keep you on the plateau, the quay, the road, the deck. Footsteps by surface, a small head bob.
 
 ## 7. Camera and shooting
 
@@ -99,7 +103,7 @@ Prints are black and white with paper tone, grain by ISO and light, blur by shar
 
 ## 10. The Island Courier
 
-Halldór rates a print on the four scores and places it: composite under 40 page 6 (base $20), 40 to 69 page 3 ($40), 70 and up front page ($120). Pay = base × editor mood (0.8 to 1.3) × repeat penalty (1.0 first of a category, 0.6 second, 0.3 after, unless 25 sharper than the best sold) × (0.75 + 0.5 × composite/100). Sold prints queue for the next edition. The edition is a generated newspaper page with a headline and story by category and placement, readable later in the journal.
+Halldór rates a print on the four scores and places it: composite under 40 page 6 (base $20), 40 to 69 page 3 ($40), 70 and up front page ($120). Pay = base × editor mood (0.8 to 1.3) × repeat penalty (1.0 first of a category, 0.6 second, 0.3 after, unless 25 sharper than the best sold) × (0.75 + 0.5 × composite/100). Sold prints queue for the next edition. When it goes out, a short press sequence plays (the press running, the doorstep in the morning), then the generated newspaper page; the paper also lies on the doormat at home until the next edition and can be reread there. The edition is a generated newspaper page with a headline and story by category and placement, readable later in the journal.
 
 Attention per publication: page 6 +2, page 3 +5, front page +12; −4 per day without an edition. The meter appears after the first front page. At 20 (tier 1) a sedan parks by the house and the Man appears on Main street.
 
@@ -120,11 +124,11 @@ Every named character has a greeting that changes with the story and a set of to
 | Tobias | twelve, sneaks near the base | Main street Midday and Night, woods at Evening |
 | The Man | unknown | Main street after tier 1 |
 
-Each has a distinct silhouette: Sigrún's apron, Aksel's height and rope, Tobias's size and cap, Marit's glasses, Halldór's newspaper and cane, the Man's coat. The journal's People tab keeps a portrait, role, description, trust, and notes from what they have told you.
+Each has a face (smile, grim, young, calm), turns their head to follow you within seven metres, and a distinct silhouette: Sigrún's apron, Aksel's height and rope, Tobias's size and cap, Marit's glasses, Halldór's newspaper and cane, the Man's coat. The journal's People tab keeps a portrait, role, description, trust, and notes from what they have told you.
 
 ## 13. Journal and quests
 
-J opens the journal: Open, Done, People, Editions. Quests are data with stages, each a predicate on game state, with a hint for the current stage. Any change posts a toast and a chime.
+The HUD carries a persistent objective line: the current stage of the most pressing open quest with its hint, and the chart pulses the pin for that stage's place. J opens the journal: Open, Done, People, Editions. Quests are data with stages, each a predicate on game state, with a hint for the current stage. Any change posts a toast and a chime.
 
 - The house with one lamp: sleep, read the letter, develop a roll.
 - Before the fog lifts (Sigrún): shoot the lighthouse in the morning, develop, find the object, show Halldór.
@@ -151,6 +155,8 @@ From Attention tier 1, entering Main street with undeveloped film starts the sed
 At trust 2, in Evening or Night, "Take me out on the water." The deck rolls, handheld shake is 2.6× worse, the tripod is not allowed. The shore moves past: the base hangar (subject rarity 30, story bonus for the fence), the fence, lights, the searchlight. The object and the harbor light can appear from the water. Ask Aksel to turn back to return.
 
 ## 18. Random events and life
+
+Main street has a dog trotting its length with a two-frame leg cycle, chimney smoke on three roofs, gulls, and Tobias walking his beat between the school and the church at midday.
 
 On arriving somewhere (once per place per band, 40 percent chance) a short event may play: the dog, a stranger's folded note (a reader tip), men in good coats outside the Courier (+1 Attention), the ferry horn, chalk marks on Aksel's wheelhouse, something knocking under the quay at night, a thermos and stool left on the cliff (+1 Attention), a tourist in a yellow coat, a fox, a truck with its lights off on the fence road, an envelope under the door, the telephone that is not connected, Marit's clock that runs slow on foggy days.
 

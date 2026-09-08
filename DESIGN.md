@@ -1,4 +1,4 @@
-# The Island Photographer — Design Document (build 6)
+# The Island Photographer — Design Document (build 7)
 
 Working title. Oone Films. This document describes every mechanic in the current prototype as built, with the numbers the code uses. It follows the GDD v0.1 brief and records where the build departs from it.
 
@@ -18,7 +18,7 @@ A full day takes roughly ten to fifteen minutes of real time.
 
 ## 3. World and locations
 
-All locations are first-person 3D, low poly, cel shaded (three-step toon ramp, flat shading, dark hull outlines on props and people, banded sky dome). Travel happens through an admiralty chart (M).
+All locations are first-person 3D, low poly, cel shaded (three-step toon ramp, flat shading, dark hull outlines on props and people, banded sky dome). Travel happens through an admiralty chart (M). Every area also has a visible exit: a lit signpost with an "Exit" tag (two on Main street, one each at the harbor, the cliff path, the woods path, the shop door, and the house's front door) that opens the chart when you use it. Only Aksel's boat has no post; you ask Aksel to turn back.
 
 - **Grandfather's house** (interior). Bed, kitchen table with the letter and notebook, cupboard, camera bag, print shelf, basement door (darkroom), attic stair (nailed shut), front door. A wall clock shows the game time.
 - **Main street.** Diner (Sigrún), the Courier (Halldór), school, houses, the church with an over-tall spire. Street lamps at night. A dog with one white ear by day. The sedan and the Man from Attention tier 1.

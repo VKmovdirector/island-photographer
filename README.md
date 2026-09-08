@@ -1,9 +1,13 @@
-# The Island Photographer — build 6
+# The Island Photographer — build 7
 
 Single-file web prototype of the Oone Films GDD v0.1: `index.html` (Three.js r128 from cdnjs, Google Fonts, nothing else).
 Earlier builds are kept as `v1-topdown.html` and `v2-firstperson.html`. The plan this build follows is `PLAN-build3.md`.
 
-## What build 6 adds
+## What build 7 adds
+
+- Every area has a visible, lit Exit signpost that opens the chart (the shop door now opens the chart too).
+
+## What build 6 added
 
 - Smooth look (eased toward the mouse target), faster running (2.3×), and no floating camera prop in first person.
 

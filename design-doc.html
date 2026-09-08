@@ -17,7 +17,7 @@ table{border-collapse:collapse;width:100%;font:13px var(--mono)}
 th{text-align:left;font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:11px;color:var(--ink2);border-bottom:1px solid var(--ink);padding:6px 8px}
 td{border-bottom:1px solid var(--rule);padding:6px 8px;vertical-align:top;font-variant-numeric:tabular-nums}
 </style>
-<main><h1>The Island Photographer — Design Document (build 5)</h1>
+<main><h1>The Island Photographer — Design Document (build 6)</h1>
 <p>Working title. Oone Films. This document describes every mechanic in the current prototype as built, with the numbers the code uses. It follows the GDD v0.1 brief and records where the build departs from it.</p>
 <h2>1. Premise and tone</h2>
 <p>A former reporter inherits his grandfather's house on a North Atlantic island of about two thousand people. He arrives by ferry at dusk with a suitcase and a film camera. His first roll, shot at the lighthouse, holds something he did not see. The island's paper buys it. From there every publication changes the island and draws attention from a military base behind a fence, from researchers, and from men in plain sedans.</p>
@@ -49,7 +49,7 @@ td{border-bottom:1px solid var(--rule);padding:6px 8px;vertical-align:top;font-v
 <h2>5. Food</h2>
 <p>A meter from 0 to 100, starting at 70, dropping 4 per hour. Eating: cupboard bread once a day (+35), Sigrún's eggs and coffee ($4, +60), coffee ($1, +15), tinned fish from Marit ($3, +40, eaten from the bag). Under 30: walking 25 percent slower and handheld shake 70 percent worse. Under 10: you cannot hold still, so the woods entity will not come. Sleep costs 10.</p>
 <h2>6. Movement and interaction</h2>
-<p>WASD walks, Shift runs at 1.8× with a heavier bob (running near a phenomenon counts as movement), the mouse looks (pointer lock on click, can be turned off in settings). E uses whatever you face within about 2.5 metres. Bounds and obstacle circles keep you on the plateau, the quay, the road, the deck. Footsteps by surface, a small head bob.</p>
+<p>WASD walks, Shift runs at 2.3× with a heavier bob (running near a phenomenon counts as movement). The mouse writes a look target and the view eases toward it with a 45 ms time constant, so turns are smooth at any frame rate; large jumps are clamped per event. Pointer lock on click, can be turned off in settings. Nothing is drawn in the player's hands. E uses whatever you face within about 2.5 metres. Bounds and obstacle circles keep you on the plateau, the quay, the road, the deck. Footsteps by surface, a small head bob.</p>
 <h2>7. Camera and shooting</h2>
 <p>C or right click raises the camera. The view narrows to a 3:2 frame with the focal length's field of view. Autofocus settles on whatever sits under the bracket; the view softens while it hunts and the bracket turns green and tightens when it locks. Left click shoots one exposure. The wheel zooms 50 to 135 mm when the 135 is mounted. T sets the tripod (not on the boat). A light pill reads DARK, DIM, LIGHT OK, or BRIGHT.</p>
 <p><strong>Film.</strong> Rolls of 12. ISO 100 (daylight) and ISO 400 (dusk and night, grainy by day). A partly shot roll can be rewound to an exposed roll and developed.</p>

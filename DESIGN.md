@@ -1,4 +1,4 @@
-# The Island Photographer — Design Document (build 5)
+# The Island Photographer — Design Document (build 6)
 
 Working title. Oone Films. This document describes every mechanic in the current prototype as built, with the numbers the code uses. It follows the GDD v0.1 brief and records where the build departs from it.
 
@@ -61,7 +61,7 @@ A meter from 0 to 100, starting at 70, dropping 4 per hour. Eating: cupboard bre
 
 ## 6. Movement and interaction
 
-WASD walks, Shift runs at 1.8× with a heavier bob (running near a phenomenon counts as movement), the mouse looks (pointer lock on click, can be turned off in settings). E uses whatever you face within about 2.5 metres. Bounds and obstacle circles keep you on the plateau, the quay, the road, the deck. Footsteps by surface, a small head bob.
+WASD walks, Shift runs at 2.3× with a heavier bob (running near a phenomenon counts as movement). The mouse writes a look target and the view eases toward it with a 45 ms time constant, so turns are smooth at any frame rate; large jumps are clamped per event. Pointer lock on click, can be turned off in settings. Nothing is drawn in the player's hands. E uses whatever you face within about 2.5 metres. Bounds and obstacle circles keep you on the plateau, the quay, the road, the deck. Footsteps by surface, a small head bob.
 
 ## 7. Camera and shooting
 

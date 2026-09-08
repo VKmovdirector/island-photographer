@@ -1,9 +1,13 @@
-# The Island Photographer — build 5
+# The Island Photographer — build 6
 
 Single-file web prototype of the Oone Films GDD v0.1: `index.html` (Three.js r128 from cdnjs, Google Fonts, nothing else).
 Earlier builds are kept as `v1-topdown.html` and `v2-firstperson.html`. The plan this build follows is `PLAN-build3.md`.
 
-## What build 5 adds
+## What build 6 adds
+
+- Smooth look (eased toward the mouse target), faster running (2.3×), and no floating camera prop in first person.
+
+## What build 5 added
 
 - Shift to run. A persistent objective line under the HUD with the chart pin pulsing for it. A press-and-doorstep sequence for every edition, and the paper on the doormat at home. Faces, head turns, a walking Tobias, a trotting dog, chimney smoke. Daily weather: clear, fog, or rain, with rain that darkens, mists the prints, and quiets the birds.
 
@@ -20,7 +24,7 @@ Earlier builds are kept as `v1-topdown.html` and `v2-firstperson.html`. The plan
 
 ## What build 3 added
 
-- **Low poly, cel shaded.** Toon materials with a three-step ramp, flat shading, inverted-hull outlines on props and people, a banded sky dome, and daylight that blends across the day instead of jumping. Trees are instanced. A camera sits in your hand when it is lowered, and the lens on it changes when you mount the 135mm.
+- **Low poly, cel shaded.** Toon materials with a three-step ramp, flat shading, inverted-hull outlines on props and people, a banded sky dome, and daylight that blends across the day instead of jumping. Trees are instanced.
 - **Clock and bed.** A continuous clock from 06:00. Travel costs minutes by chart distance, talking five, developing thirty, waiting an hour; time in the field runs at one game minute per real second. The four bands (Morning, Midday, Evening, Night) drive light, phenomena, and where people are. The day ends only in bed at home after 19:00. Past 02:00 you collapse and lose the morning. Each night has a one-line dream.
 - **Journal (J).** Open, done, and editions. Story quests (the house, the letter and the angles, the front page, the sedan, Aksel's boat), leads from rumors, stage checklists with hints, and a readable archive of every edition.
 - **3D bag and shop (I).** Every item is a low-poly model turning on a stand: rangefinder, lenses, film, tripod, enlarger, key, letter, stone, samples. Marit's shop is now an interior with the items on shelves; look at one, press E, buy it, and it leaves the shelf.

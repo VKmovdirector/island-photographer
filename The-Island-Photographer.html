@@ -1,0 +1,1063 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<title>The Island Photographer</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Special+Elite&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --ground:#080c0d; --ground2:#10171a; --fog:#c3cbc4; --fog2:#8a948c; --mute:#57615a;
+  --amber:#c98a34; --amber2:#e9b85f; --teal:#3f8a7f; --paper:#e8e1cf; --paper2:#d4cab3; --ink:#1b1814;
+  --safelight:#b5382c; --good:#7fb069; --warn:#e0a458; --bad:#c9503f;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace; --type:'Special Elite','Courier New',monospace; --mast:'Playfair Display',Georgia,serif;
+}
+html,body{height:100%;margin:0;background:var(--ground);color:var(--fog);font-family:var(--type);overflow:hidden}
+#wrap{position:fixed;inset:0;background:var(--ground)}
+#stage{position:absolute;left:0;top:0;width:960px;height:600px;transform-origin:0 0;background:#000;overflow:hidden;box-shadow:0 0 0 1px #000,0 30px 80px rgba(0,0,0,.6)}
+canvas#gl,canvas#cv{position:absolute;left:0;top:0;width:960px;height:600px;display:block}
+canvas#cv{pointer-events:none}
+canvas#gl{cursor:crosshair}
+#ui{position:absolute;inset:0;pointer-events:none}
+#ui>*{pointer-events:auto}
+.hud{position:absolute;left:16px;top:12px;font:13px/1.35 var(--mono);color:var(--fog);text-shadow:0 1px 2px #000;pointer-events:none}
+.hud b{color:var(--amber2);font-weight:600}
+.hud .att{margin-top:4px;color:var(--fog2)}
+.hud .att i{display:inline-block;width:90px;height:6px;background:#1e2628;vertical-align:middle;margin:0 6px;border-radius:2px;overflow:hidden}
+.hud .att i s{display:block;height:100%;background:var(--bad);width:0;transition:width .8s}
+.hud .food i s{background:var(--amber)}
+.hud .food.low i s{background:var(--bad)}
+.rt{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;background:#0e1518;border:1px solid #223032;padding:10px 14px}
+.rt h4{margin:0 0 3px;font:16px var(--type);color:#ece6d6}.rt p{margin:0;font:12px/1.4 var(--type);color:var(--fog2)}.rt .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.rt.done{border-color:#2b4a3c}
+.person{display:grid;grid-template-columns:54px 1fr;gap:12px;background:#0e1518;border:1px solid #223032;padding:12px 14px;margin-bottom:8px}
+.person .pic{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:900 22px var(--mast);color:#0b0e0e;border:2px solid #223032}
+.person h4{margin:0;font:17px var(--type);color:#ece6d6;display:flex;justify-content:space-between}.person h4 span{font:11px var(--mono);color:var(--fog2);letter-spacing:.08em}
+.person p{margin:4px 0 0;font:13px/1.5 var(--type);color:var(--fog2)}.person ul{margin:6px 0 0;padding-left:16px;font:12px/1.5 var(--type);color:var(--teal)}
+.wipe{position:relative;height:10px;background:#1a2326;border:1px solid #33403f;width:180px;display:inline-block;vertical-align:middle;margin-left:8px}.wipe s{display:block;height:100%;background:var(--amber);width:0}
+#kit{position:absolute;right:16px;bottom:14px;font:11px var(--mono);color:var(--fog2);text-align:right;pointer-events:none;text-shadow:0 1px 2px #000}
+#kit b{color:var(--fog);font-weight:600}
+#prompt{position:absolute;left:0;right:0;bottom:16px;text-align:center;font:15px var(--type);color:var(--fog);text-shadow:0 1px 3px #000;pointer-events:none}
+#prompt kbd,.k{font:12px var(--mono);background:#161d20;border:1px solid #33403f;border-radius:3px;padding:1px 5px;color:var(--amber2)}
+#cue{position:absolute;left:0;right:0;top:110px;text-align:center;font:italic 19px var(--type);color:#e6e0cd;text-shadow:0 1px 5px #000;opacity:0;transition:opacity .7s;pointer-events:none}
+#toast{position:absolute;right:16px;top:12px;max-width:310px;font:13px/1.4 var(--type);color:var(--fog);text-align:right;pointer-events:none}
+#toast div{background:rgba(8,12,13,.84);border-left:2px solid var(--amber);padding:6px 10px;margin-bottom:6px;animation:tin .3s}
+@keyframes tin{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:none}}
+button,.btn{font:15px var(--type);color:var(--fog);background:#141b1e;border:1px solid #33403f;padding:8px 14px;cursor:pointer;border-radius:2px}
+button:hover,.btn:hover{background:#1d272b;border-color:var(--amber)}
+button:focus-visible{outline:2px solid var(--amber2);outline-offset:2px}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--amber);color:#1b1408;border-color:var(--amber2);font-weight:bold}
+button.primary:hover{background:var(--amber2)}
+button.small{font-size:13px;padding:5px 10px}
+button.ghost{background:transparent;border-color:#2a3538;color:var(--fog2)}
+/* dialogue */
+#dlg{position:absolute;left:60px;right:60px;bottom:36px;background:rgba(6,9,10,.94);border:1px solid #223032;padding:16px 20px 14px;font:17px/1.5 var(--type);display:none;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+#dlg .who{font:600 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--amber2);margin-bottom:6px;display:flex;justify-content:space-between}
+#dlg .who span{color:var(--mute);letter-spacing:.08em}
+#dlg .txt{min-height:54px;color:#e4dfd2}
+#dlg .topics{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+#dlg .topics button{font-size:14px;padding:6px 12px}
+#dlg .more{position:absolute;right:16px;bottom:8px;font:11px var(--mono);color:var(--mute)}
+/* panels */
+.panel{position:absolute;inset:0;display:none;background:radial-gradient(ellipse at 30% 20%,#151d20,#080c0d 70%)}
+.panel.on{display:block}
+.panel .inner{position:absolute;inset:36px 56px}
+.panel h2{font:900 30px var(--mast);color:#ece6d6;margin:0 0 4px;letter-spacing:.01em;text-wrap:balance}
+.panel .sub{font:12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--fog2);margin-bottom:16px}
+.panel .close{position:absolute;right:56px;top:36px}
+.list{display:flex;flex-direction:column;gap:8px;max-height:420px;overflow:auto;padding-right:6px}
+.item{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;background:#0e1518;border:1px solid #223032;padding:10px 14px}
+.item h4{margin:0 0 3px;font:16px var(--type);color:#ece6d6}
+.item p{margin:0;font:12px/1.4 var(--type);color:var(--fog2)}
+.item .price{font:600 14px var(--mono);color:var(--amber2);text-align:right}
+.item.owned{border-color:#2b4a3c}
+.item.owned .price{color:var(--good)}
+.item .acts{display:flex;gap:6px;justify-content:flex-end}
+.money{font:600 13px var(--mono);color:var(--amber2)}
+/* inventory */
+.inv{display:grid;grid-template-columns:300px 1fr;gap:20px}
+.inv .cam{background:#0e1518;border:1px solid #223032;padding:14px 16px;font:13px/1.6 var(--type);color:var(--fog2)}
+.inv .cam h3{margin:0 0 8px;font:18px var(--type);color:#ece6d6}
+.inv .cam b{color:#ece6d6;font-weight:normal}
+.inv .cam .row{display:flex;justify-content:space-between;gap:8px;border-top:1px dashed #223032;padding:6px 0}
+.inv .cam .row:first-of-type{border-top:0}
+.note{background:var(--paper);color:var(--ink);padding:14px 18px;font:14px/1.6 var(--type);box-shadow:0 8px 30px rgba(0,0,0,.5);max-width:520px;margin-top:8px}
+.note s{text-decoration:none;color:#9a8f7a;background:#cfc4a8;letter-spacing:.2em}
+/* map chart */
+#map{background:#0a0d0e}
+#map canvas{position:absolute;left:0;top:0}
+#map .pin{position:absolute;transform:translate(-50%,-100%);background:transparent;border:0;padding:0;cursor:pointer;color:#2d2618;font:13px var(--type);text-align:center;pointer-events:auto}
+#map .pin i{display:block;width:12px;height:12px;margin:0 auto 2px;border-radius:50%;background:#7a2b22;border:2px solid #2d2618;box-shadow:0 0 0 2px rgba(0,0,0,.08)}
+#map .pin.here i{background:#e9b85f}
+#map .pin.rumor i{box-shadow:0 0 0 4px rgba(201,138,52,.5)}
+#map .pin:hover{color:#7a2b22}
+#map .pin:disabled{opacity:.5;cursor:default}
+#map .side{position:absolute;right:26px;top:26px;width:230px;background:rgba(232,225,207,.94);color:var(--ink);padding:14px 16px;font:13px/1.5 var(--type);box-shadow:0 8px 30px rgba(0,0,0,.4)}
+#map .side h3{margin:0 0 4px;font:900 18px var(--mast)}
+#map .side .t{font:11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:#6a6252;margin-bottom:10px}
+#map .side ul{margin:6px 0 0;padding-left:16px}
+#map .side li{margin-bottom:4px}
+#map .side .acts{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+#map .side button{background:#2d2618;color:#e8e1cf;border-color:#2d2618;font-size:13px}
+#map .side button:hover{background:#4a3f2a}
+/* darkroom */
+#darkroom{background:#120809}
+#darkroom .inner{inset:28px 40px}
+#darkroom h2{color:#e7b8ad}
+#darkroom .sub{color:#8f5a52}
+.tray{margin:20px auto 0;width:520px;background:#1e0c0d;border:1px solid #4a1f1c;padding:16px 20px;text-align:center}
+.tray .bar{position:relative;height:18px;background:#2a1213;border:1px solid #5a2620;margin:12px 0}
+.tray .bar .zone{position:absolute;top:0;bottom:0;background:rgba(120,190,110,.25);border-left:1px solid #7fb069;border-right:1px solid #7fb069}
+.tray .bar .fill{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#7a2a22,#c9503f);width:0}
+.tray .hint{font:13px var(--type);color:#c7958c}
+.rolls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+.strip{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;justify-content:center}
+.print{width:150px;background:#2a1517;padding:6px 6px 4px;border:1px solid #4a1f1c;position:relative;cursor:pointer;transition:transform .2s}
+.print:hover{transform:translateY(-2px)}
+.print img{display:block;width:138px;height:92px;background:#000;filter:blur(9px) contrast(.35) brightness(.6);transition:filter 1.1s ease-out}
+.print.res img{filter:blur(0) contrast(1) brightness(1)}
+.print .n{font:10px var(--mono);color:#a3746c;margin-top:4px;display:flex;justify-content:space-between}
+.print .t{position:absolute;left:6px;top:6px;font:600 9px var(--mono);letter-spacing:.1em;padding:1px 5px;background:rgba(0,0,0,.6);color:var(--amber2);text-transform:uppercase}
+.print .t.sell{color:var(--good)} .print .t.discard{color:var(--bad)} .print .t.sold{color:#9ab}
+.print.anom::after{content:'';position:absolute;right:6px;top:6px;width:6px;height:6px;border-radius:50%;background:var(--safelight);box-shadow:0 0 6px var(--safelight)}
+#inspect{position:absolute;inset:0;background:rgba(6,3,3,.97);display:none}
+#inspect.on{display:block}
+#inspect .big{position:absolute;left:60px;top:40px;width:720px;height:480px;background:#000;cursor:none;overflow:hidden}
+#inspect .big img{display:block;width:720px;height:480px}
+#inspect canvas{position:absolute;left:0;top:0;pointer-events:none}
+#inspect .side{position:absolute;left:800px;top:40px;width:120px;display:flex;flex-direction:column;gap:8px;font:12px/1.4 var(--type);color:#c7958c}
+#inspect .side b{color:#e7b8ad;font-weight:normal;display:block;font-size:14px}
+#inspect .side .unk{color:var(--safelight);font:600 12px var(--mono);letter-spacing:.14em;text-transform:uppercase;opacity:0;transition:opacity .4s}
+#inspect .side .unk.on{opacity:1}
+/* newspaper */
+#paperview{background:#15120e}
+.paper{position:absolute;left:120px;top:24px;width:720px;height:552px;background:var(--paper);color:var(--ink);padding:22px 30px;box-sizing:border-box;box-shadow:0 20px 60px rgba(0,0,0,.7);overflow:hidden;font-family:Georgia,'Times New Roman',serif}
+.paper .mast{font:900 40px/1 var(--mast);text-align:center;letter-spacing:.02em;border-bottom:3px double var(--ink);padding-bottom:8px}
+.paper .date{display:flex;justify-content:space-between;font:11px var(--mono);letter-spacing:.1em;text-transform:uppercase;padding:5px 0;border-bottom:1px solid var(--ink);margin-bottom:12px}
+.paper .lead{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.paper .lead.small{grid-template-columns:1fr 200px}
+.paper h1{font:900 30px/1.05 var(--mast);margin:0 0 8px;text-wrap:balance}
+.paper .lead.small h1{font-size:20px}
+.paper .lead.tiny h1{font-size:16px}
+.paper .photo{background:#111;padding:4px;border:1px solid #777}
+.paper .photo img{display:block;width:100%;filter:contrast(1.05) sepia(.25)}
+.paper .cap{font:italic 11px/1.3 Georgia,serif;margin-top:4px;color:#3a352c}
+.paper .body{font:12.5px/1.45 Georgia,serif;column-count:2;column-gap:14px;text-align:justify;hyphens:auto}
+.paper .body p{margin:0 0 6px}
+.paper .body p:first-child::first-letter{font:900 34px/0.8 var(--mast);float:left;margin:4px 4px 0 0}
+.paper .pg{position:absolute;right:30px;bottom:14px;font:600 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:#6a6252}
+.paper .also{margin-top:12px;border-top:1px solid #999;padding-top:6px;font:11px/1.4 Georgia,serif;color:#3a352c}
+#paperview .after{position:absolute;left:0;right:0;bottom:12px;text-align:center}
+/* sale */
+.sale{display:grid;grid-template-columns:300px 1fr;gap:24px;margin-top:8px}
+.sale .thumbs{display:flex;flex-direction:column;gap:8px;max-height:430px;overflow:auto;padding-right:4px}
+.sale .thumbs .print{width:240px}
+.sale .thumbs .print img{width:228px;height:152px;filter:none}
+.appr{background:#0e1518;border:1px solid #223032;padding:16px 18px;min-height:380px}
+.appr h3{margin:0 0 4px;font:20px var(--type);color:#ece6d6}
+.appr .q{font:italic 14px/1.4 var(--type);color:var(--fog2);margin-bottom:14px}
+.score{display:grid;grid-template-columns:90px 1fr 40px;gap:10px;align-items:center;font:12px var(--mono);margin:6px 0}
+.score i{height:8px;background:#1a2326;border-radius:2px;overflow:hidden;display:block}
+.score i s{display:block;height:100%;background:var(--fog2);width:0;transition:width .6s}
+.score.hi i s{background:var(--amber)} .score.lo i s{background:var(--bad)}
+.score b{font-weight:600;text-align:right;color:#ece6d6}
+.appr .comp{margin-top:14px;padding-top:12px;border-top:1px solid #223032;display:flex;justify-content:space-between;align-items:center;font:13px var(--mono)}
+.appr .comp b{font-size:20px;color:var(--amber2)}
+.appr .place{font:12px var(--mono);color:var(--fog2);letter-spacing:.1em;text-transform:uppercase}
+.appr .actions{margin-top:16px;display:flex;gap:10px}
+/* cards / title */
+#cards{position:absolute;inset:0;background:#000;display:none;align-items:center;justify-content:center;text-align:center;font:22px/1.6 var(--type);color:#e4dfd2;padding:0 120px}
+#cards.on{display:flex}
+#cards .c{opacity:0;transition:opacity 1.2s}
+#cards .c.on{opacity:1}
+#title{background:#070a0b}
+#title .inner{inset:0}
+#title .t{position:absolute;left:0;right:0;top:140px;text-align:center}
+#title h1{font:900 54px/1 var(--mast);color:#ece6d6;margin:0;letter-spacing:.01em}
+#title .k{font:12px var(--mono);letter-spacing:.3em;text-transform:uppercase;color:var(--fog2);margin:14px 0 10px}
+#title .ep{font:italic 15px/1.5 var(--type);color:#8a948c;max-width:520px;margin:0 auto 34px}
+#title .b{display:flex;gap:12px;justify-content:center}
+#title .credit{position:absolute;left:0;right:0;bottom:16px;text-align:center;font:11px/1.6 var(--mono);letter-spacing:.08em;color:#46504a;padding:0 40px}
+#debug{position:absolute;left:16px;bottom:44px;font:11px/1.35 var(--mono);color:#9fe0a0;background:rgba(0,0,0,.6);padding:8px 10px;white-space:pre;display:none;pointer-events:none}
+#debug.on{display:block}
+#fade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .4s}
+#fade.on{opacity:1;pointer-events:auto}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+<style>
+/* build 3 additions */
+.tabs{display:flex;gap:6px;margin-bottom:14px}
+.tabs button{font-size:13px;padding:6px 12px}
+.tabs button.on{background:var(--amber);color:#1b1408;border-color:var(--amber2)}
+.quest{background:#0e1518;border:1px solid #223032;padding:12px 14px;margin-bottom:8px}
+.quest h4{margin:0 0 2px;font:17px var(--type);color:#ece6d6;display:flex;justify-content:space-between}
+.quest h4 span{font:11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--fog2)}
+.quest .giver{font:11px var(--mono);color:var(--amber2);margin-bottom:6px}
+.quest ol{margin:0;padding-left:18px;font:13px/1.5 var(--type);color:var(--fog2)}
+.quest li.done{color:#5f7a5f;text-decoration:line-through}
+.quest li.now{color:#ece6d6}
+.quest li.now::marker{color:var(--amber2)}
+.quest .hint{font:12px var(--type);color:var(--teal);margin-top:6px}
+.quest.done{opacity:.6}
+.inv3{display:grid;grid-template-columns:1fr 320px;gap:20px}
+.turn{background:radial-gradient(ellipse at 50% 40%,#1a2327,#0a0f11 70%);border:1px solid #223032;position:relative;min-height:300px}
+.turn canvas{display:block;width:318px;height:240px}
+.turn .info{padding:10px 14px 14px;font:13px/1.5 var(--type);color:var(--fog2)}
+.turn .info h3{margin:0 0 4px;font:18px var(--type);color:#ece6d6}
+.turn .info b{color:var(--amber2);font-weight:normal}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-height:440px;overflow:auto;padding-right:4px}
+.slot{background:#0e1518;border:1px solid #223032;padding:8px 10px;cursor:pointer;min-height:64px}
+.slot:hover,.slot.on{border-color:var(--amber)}
+.slot h4{margin:0;font:14px var(--type);color:#ece6d6}
+.slot p{margin:2px 0 0;font:11px var(--type);color:var(--fog2)}
+.slot .tag{font:10px var(--mono);color:var(--amber2);letter-spacing:.1em;text-transform:uppercase}
+#card{position:absolute;left:250px;top:90px;width:460px;background:#0c1215;border:1px solid #2a3a3e;box-shadow:0 20px 60px rgba(0,0,0,.7);display:none;padding:16px 18px}
+#card.on{display:block}
+#card .turn{min-height:0}
+#card .acts{display:flex;gap:10px;margin-top:10px}
+.pages{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.page{background:var(--paper);color:var(--ink);padding:14px 16px;font:14px/1.5 var(--type);min-height:130px;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.4);position:relative}
+.page.locked{color:#5a5244}
+.page.sel{outline:2px solid var(--amber)}
+.page .n{font:10px var(--mono);letter-spacing:.12em;color:#8a8070;text-transform:uppercase;margin-bottom:4px}
+.page .u{margin-top:8px;padding-top:6px;border-top:1px dashed #b5aa90;color:#2a2618}
+.samples{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 16px}
+.samples button.on{border-color:var(--amber);color:var(--amber2)}
+#settings .inner{inset:80px 260px}
+.set{display:grid;grid-template-columns:160px 1fr;gap:10px 16px;align-items:center;font:14px var(--type);color:var(--fog2)}
+.set input[type=range]{width:100%}
+.clock{font:600 13px var(--mono);color:var(--fog)}
+.editions{display:flex;flex-direction:column;gap:8px}
+.edition{display:grid;grid-template-columns:90px 1fr;gap:12px;align-items:center;background:#0e1518;border:1px solid #223032;padding:8px 12px;cursor:pointer}
+.edition img{width:90px;filter:sepia(.3) contrast(1.1)}
+.edition h4{margin:0;font:15px var(--type);color:#ece6d6}
+.edition p{margin:2px 0 0;font:11px var(--mono);color:var(--fog2)}
+#inspect .big.crop{cursor:crosshair}
+</style>
+</head>
+<body>
+<div id="wrap"><div id="stage">
+<canvas id="gl" width="960" height="600"></canvas>
+<canvas id="cv" width="960" height="600"></canvas>
+<div id="ui">
+  <div class="hud" id="hud"></div>
+  <div id="kit"></div>
+  <div id="toast"></div>
+  <div id="cue"></div>
+  <div id="prompt"></div>
+  <div id="debug"></div>
+  <div id="dlg"><div class="who"><b id="dlgWho"></b><span id="dlgTrust"></span></div><div class="txt" id="dlgTxt"></div><div class="topics" id="dlgTopics"></div><div class="more" id="dlgMore">click / space</div></div>
+
+  <div class="panel" id="title"><div class="inner">
+    <div class="t"><h1>The Island Photographer</h1><div class="k">build 3 · Oone Films</div>
+    <p class="ep">A former reporter inherits a house on an island where the fog comes in on the wrong wind. His grandfather's camera still works. The prints show more than the viewfinder.</p>
+    <div class="b"><button class="primary" id="btnNew">Take the ferry</button><button id="btnCont" style="display:none">Continue</button></div></div>
+    <div class="credit">WASD walk · mouse look (click to capture) · E use / talk · M chart · I bag · J journal · N watch · C or right click raise camera · left click shoot · wheel zoom · T tripod · Space wait · Esc settings</div>
+  </div></div>
+
+  <div class="panel" id="map"><canvas id="chart" width="960" height="600"></canvas><div id="pins"></div><div class="side" id="mapSide"></div></div>
+
+  <div class="panel" id="inventory"><div class="inner">
+    <h2>Camera bag</h2><div class="sub" id="invSub"></div>
+    <button class="close" onclick="closePanel()">Close</button>
+    <div class="inv3"><div class="grid" id="invGrid"></div><div class="turn" id="invTurn"></div></div>
+  </div></div>
+
+  <div class="panel" id="journal"><div class="inner">
+    <h2>Journal</h2><div class="sub" id="jSub"></div>
+    <button class="close" onclick="closePanel()">Close</button>
+    <div class="tabs" id="jTabs"></div><div class="list" id="jList" style="max-height:400px"></div>
+  </div></div>
+
+  <div class="panel" id="notebook"><div class="inner">
+    <h2>Grandfather's notebook</h2><div class="sub">match what you carry to what he drew</div>
+    <button class="close" onclick="closePanel()">Close</button>
+    <div class="samples" id="nbSamples"></div><div class="pages" id="nbPages"></div>
+  </div></div>
+
+  <div class="panel" id="shop"><div class="inner">
+    <h2>Harbor Camera &amp; Repair</h2><div class="sub" id="shopSub"></div>
+    <button class="close" onclick="closePanel()">Leave the counter</button>
+    <div class="tabs" id="shopTabs"></div><div class="inv3"><div class="grid" id="shopGrid"></div><div class="turn" id="shopTurn"></div></div>
+  </div></div>
+  <div class="panel" id="routine"><div class="inner">
+    <h2>Morning</h2><div class="sub" id="rtSub"></div>
+    <div class="inv3"><div id="rtBody" class="list" style="max-height:440px"></div><div class="turn" id="rtTurn"></div></div>
+  </div></div>
+  <div class="panel" id="watch"><div class="inner">
+    <h2>Grandfather's watch</h2><div class="sub" id="wSub"></div>
+    <button class="close" onclick="closePanel()">Put it away</button>
+    <div class="inv3"><div id="wBody" class="list" style="max-height:440px"></div><div class="turn" id="wTurn"></div></div>
+  </div></div>
+  <div class="panel" id="courier"><div class="inner">
+    <h2>The Island Courier</h2><div class="sub" id="courierSub"></div>
+    <button class="close" onclick="closePanel()">Leave</button>
+    <div class="sale"><div class="thumbs" id="saleThumbs"></div><div class="appr" id="appr"></div></div>
+  </div></div>
+
+  <div class="panel" id="darkroom"><div class="inner">
+    <h2>Basement darkroom</h2><div class="sub" id="drSub">safelight on</div>
+    <button class="close" id="drClose" onclick="closePanel()">Back upstairs</button>
+    <div id="drBody"></div>
+  </div></div>
+
+  <div class="panel" id="settings"><div class="inner">
+    <h2>Settings</h2><div class="sub">saved on this browser</div>
+    <button class="close" onclick="closePanel()">Resume</button>
+    <div class="set" id="setBody"></div>
+    <div style="margin-top:20px;display:flex;gap:10px"><button onclick="closePanel()">Resume</button><button class="ghost" onclick="toTitle()">Save and quit to title</button></div>
+  </div></div>
+
+  <div class="panel" id="paperview"><div class="paper" id="paper"></div><div class="after"><button class="primary" onclick="closePaper()">Put the paper down</button></div></div>
+  <div class="panel" id="prints"><div class="inner"><h2>Print shelf</h2><div class="sub">tag prints: keep at home, sell at the Courier, or discard</div><button class="close" onclick="closePanel()">Back</button><div class="strip" id="printsStrip" style="justify-content:flex-start"></div></div></div>
+  <div id="card"></div>
+  <div id="inspect"><div class="big"><img id="insImg" alt=""><canvas id="insCv" width="720" height="480"></canvas></div><div class="side" id="insSide"></div></div>
+  <div id="cards"><div class="c" id="cardTxt"></div></div>
+  <div id="fade"></div>
+</div>
+</div></div>
+<canvas id="itemcv" width="318" height="240" style="display:none"></canvas>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* =====================================================================
+   THE ISLAND PHOTOGRAPHER — build 3 (cel shaded, clock, journal, 3D bag & shop,
+   samples & notebook, the tail, Aksel's boat, ambient audio, settings)
+   ===================================================================== */
+'use strict';
+const T=THREE;
+const W=960,H=600,FRAME={x:120,y:60,w:720,h:480}, $=s=>document.querySelector(s), clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), lerp=(a,b,t)=>a+(b-a)*t;
+const rnd=(a,b)=>a+Math.random()*(b-a), pick=a=>a[Math.floor(Math.random()*a.length)];
+const gl=$('#gl'), cv=$('#cv'), ctx=cv.getContext('2d');
+function fitStage(){const s=Math.min(innerWidth/W,innerHeight/H);const st=$('#stage');st.style.transform=`translate(${(innerWidth-W*s)/2}px,${(innerHeight-H*s)/2}px) scale(${s})`;st.dataset.s=s;}
+addEventListener('resize',fitStage);fitStage();
+const FILTER_OK=('filter' in ctx);
+const SET=Object.assign({vol:0.8,mute:false,sens:1.0,invert:false,lock:true},JSON.parse(localStorage.getItem('islandphoto3.settings')||'{}'));
+function saveSettings(){localStorage.setItem('islandphoto3.settings',JSON.stringify(SET));if(AU.master)AU.master.gain.value=SET.mute?0:SET.vol;}
+
+/* ---------------- audio: beds + one-shots (all synthesized) ---------------- */
+const AU={ctx:null,layers:{},last:{}};
+function noiseBuf(c,sec,brown){const b=c.createBuffer(1,c.sampleRate*sec,c.sampleRate);const d=b.getChannelData(0);let l=0;for(let i=0;i<d.length;i++){if(brown){l=l*0.985+(Math.random()*2-1)*0.03;d[i]=l;}else d[i]=Math.random()*2-1;}return b;}
+function auInit(){if(AU.ctx)return;try{AU.ctx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){return}const c=AU.ctx;AU.master=c.createGain();AU.master.gain.value=SET.mute?0:SET.vol;AU.master.connect(c.destination);
+  const bed=(name,make)=>{const g=c.createGain();g.gain.value=0;g.connect(AU.master);make(g);AU.layers[name]=g;};
+  bed('wind',g=>{const s=c.createBufferSource();s.buffer=noiseBuf(c,4,true);s.loop=true;const f=c.createBiquadFilter();f.type='lowpass';f.frequency.value=320;const l=c.createOscillator();l.frequency.value=0.13;const lg=c.createGain();lg.gain.value=120;l.connect(lg).connect(f.frequency);l.start();s.connect(f).connect(g);s.start();});
+  bed('surf',g=>{const s=c.createBufferSource();s.buffer=noiseBuf(c,4,false);s.loop=true;const f=c.createBiquadFilter();f.type='bandpass';f.frequency.value=520;f.Q.value=0.6;const sw=c.createGain();sw.gain.value=0.5;const l=c.createOscillator();l.frequency.value=0.09;const lg=c.createGain();lg.gain.value=0.45;l.connect(lg).connect(sw.gain);l.start();s.connect(f).connect(sw).connect(g);s.start();});
+  bed('trees',g=>{const s=c.createBufferSource();s.buffer=noiseBuf(c,4,true);s.loop=true;const f=c.createBiquadFilter();f.type='bandpass';f.frequency.value=900;f.Q.value=0.8;const l=c.createOscillator();l.frequency.value=0.07;const lg=c.createGain();lg.gain.value=500;l.connect(lg).connect(f.frequency);l.start();s.connect(f).connect(g);s.start();});
+  bed('street',g=>{const s=c.createBufferSource();s.buffer=noiseBuf(c,4,true);s.loop=true;const f=c.createBiquadFilter();f.type='lowpass';f.frequency.value=180;s.connect(f).connect(g);s.start();});
+  bed('drone',g=>{const o=c.createOscillator();o.type='sine';o.frequency.value=48;const o2=c.createOscillator();o2.type='triangle';o2.frequency.value=48.7;const l=c.createOscillator();l.frequency.value=0.08;const lg=c.createGain();lg.gain.value=0.35;l.connect(lg).connect(g.gain);o.connect(g);o2.connect(g);o.start();o2.start();l.start();});
+  bed('birds',g=>{AU.birdsG=g;});bed('rigging',g=>{AU.rigG=g;});bed('clock',g=>{AU.clockG=g;});
+  AU.sched=setInterval(auScheduler,700);}
+function auScheduler(){if(!AU.ctx)return;const c=AU.ctx,t=c.currentTime;
+  if(AU.birdsG&&AU.birdsG.gain.value>0.01&&Math.random()<0.45){const o=c.createOscillator(),g=c.createGain();o.frequency.setValueAtTime(rnd(1800,2600),t);o.frequency.exponentialRampToValueAtTime(rnd(1200,1700),t+0.09);g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.5,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+0.12);o.connect(g).connect(AU.birdsG);o.start(t);o.stop(t+0.14);}
+  if(AU.rigG&&AU.rigG.gain.value>0.01&&Math.random()<0.35){const o=c.createOscillator(),g=c.createGain();o.type='sawtooth';o.frequency.setValueAtTime(rnd(90,160),t);o.frequency.linearRampToValueAtTime(rnd(60,120),t+0.35);const f=c.createBiquadFilter();f.type='lowpass';f.frequency.value=400;g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(0.5,t+0.08);g.gain.exponentialRampToValueAtTime(0.0001,t+0.4);o.connect(f).connect(g).connect(AU.rigG);o.start(t);o.stop(t+0.45);}
+  if(AU.clockG&&AU.clockG.gain.value>0.01){const o=c.createOscillator(),g=c.createGain();o.type='square';o.frequency.value=1400;g.gain.setValueAtTime(0.25,t);g.gain.exponentialRampToValueAtTime(0.0001,t+0.03);o.connect(g).connect(AU.clockG);o.start(t);o.stop(t+0.04);}}
+function setAmbient(p){if(!AU.ctx)return;const t=AU.ctx.currentTime;Object.keys(AU.layers).forEach(k=>{const v=p[k]||0;AU.layers[k].gain.setTargetAtTime(v,t,1.2);});AU.last=p;}
+function duck(k,v,ms){if(!AU.ctx||!AU.layers[k])return;AU.layers[k].gain.setTargetAtTime(v,AU.ctx.currentTime,0.4);if(ms)setTimeout(()=>{if(AU.last[k]!=null)AU.layers[k].gain.setTargetAtTime(AU.last[k],AU.ctx.currentTime,1.5);},ms);}
+function tone(f,dur,type='sine',vol=0.2,slide){if(!AU.ctx)return;const c=AU.ctx,o=c.createOscillator(),g=c.createGain();o.type=type;o.frequency.value=f;if(slide)o.frequency.exponentialRampToValueAtTime(slide,c.currentTime+dur);g.gain.setValueAtTime(vol,c.currentTime);g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+dur);o.connect(g).connect(AU.master);o.start();o.stop(c.currentTime+dur);}
+function noise(dur,vol=0.3,cut=3000,hp){if(!AU.ctx)return;const c=AU.ctx,b=c.createBuffer(1,c.sampleRate*dur,c.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(1-i/d.length);const s=c.createBufferSource();s.buffer=b;const f=c.createBiquadFilter();f.type='lowpass';f.frequency.value=cut;const g=c.createGain();g.gain.value=vol;let n=s.connect(f);if(hp){const h=c.createBiquadFilter();h.type='highpass';h.frequency.value=hp;n=n.connect(h);}n.connect(g).connect(AU.master);s.start();}
+const SFX={shutter(){noise(0.06,0.5,6000);setTimeout(()=>noise(0.05,0.35,2500),60);},advance(){setTimeout(()=>{noise(0.03,0.2,4000,800);setTimeout(()=>noise(0.03,0.2,4000,800),70);},260);},lock(){tone(2200,0.07,'sine',0.06);},
+  raise(){noise(0.05,0.12,2200,300);},lower(){noise(0.06,0.1,1400,200);},zoom(){noise(0.04,0.06,3000,1200);},tripod(){noise(0.08,0.25,900);setTimeout(()=>noise(0.06,0.2,700),120);setTimeout(()=>noise(0.06,0.2,700),240);},
+  sting(){tone(52,2.8,'sine',0.35,38);tone(78,2.2,'triangle',0.12,55);duck('birds',0,3500);duck('surf',0,3500);},
+  tag(){tone(1200,0.05,'square',0.04);tone(1600,0.06,'square',0.04);},coin(){tone(880,0.1,'triangle',0.12);setTimeout(()=>tone(1320,0.14,'triangle',0.12),90);},journal(){tone(660,0.08,'triangle',0.06);setTimeout(()=>tone(990,0.1,'triangle',0.06),100);},
+  foghorn(){tone(110,1.8,'sawtooth',0.08,100);tone(112,1.8,'sine',0.15,101);},slosh(){noise(0.25,0.08,900);},click(){tone(900,0.03,'square',0.03);},door(){noise(0.12,0.3,500);setTimeout(()=>noise(0.08,0.2,400),90);},page(){noise(0.18,0.08,2500,600);},
+  press(){for(let i=0;i<6;i++)setTimeout(()=>noise(0.08,0.25,1200),i*180);},empty(){tone(300,0.08,'square',0.05);},step(){noise(0.05,0.05,600);},pick(){tone(520,0.06,'triangle',0.08);tone(780,0.08,'triangle',0.06);},
+  engine(){if(!AU.ctx)return;const c=AU.ctx,o=c.createOscillator(),g=c.createGain();o.type='sawtooth';o.frequency.value=42;const f=c.createBiquadFilter();f.type='lowpass';f.frequency.value=160;g.gain.setValueAtTime(0.0001,c.currentTime);g.gain.linearRampToValueAtTime(0.25,c.currentTime+2);g.gain.linearRampToValueAtTime(0.0001,c.currentTime+9);o.connect(f).connect(g).connect(AU.master);o.start();o.stop(c.currentTime+9.2);}};
+
+/* ---------------- data ---------------- */
+const SLOTS=['Morning','Midday','Evening','Night'];
+const CATS={sky_object:{name:'Sky object',rarity:40},light:{name:'Light',rarity:45},entity:{name:'Entity',rarity:80},mundane:{name:'Local color',rarity:6}};
+const ITEMS={
+  body:{name:"Grandfather's rangefinder",kind:'body',desc:'Fixed-lens body, brass worn through at the thumb. Still meters.'},
+  lens50:{name:'50mm lens',kind:'lens',focal:50,desc:'What the eye sees. No reach.'},
+  lens135:{name:'135mm lens',kind:'lens',focal:135,price:60,desc:'Reach. Distant things become readable. Shakes in the hand.',enables:'Sky objects, far-shore lights'},
+  film100:{name:'Film, ISO 100',kind:'film',iso:100,exp:12,price:8,desc:'Daylight stock. Twelve frames. Fine grain.',enables:'Daytime subjects'},
+  film400:{name:'Film, ISO 400',kind:'film',iso:400,exp:12,price:15,desc:'Dusk and night. Twelve frames. Grainy in the sun.',enables:'Dusk and night phenomena'},
+  tripod:{name:'Tripod',kind:'gear',price:40,desc:'Three legs. No shake, long exposures, and a way to stand truly still.',enables:'Night lights, the woods'},
+  enlarger:{name:'Enlarger',kind:'gear',price:80,desc:'For the basement. Crop and re-frame a print after the fact, at the cost of grain.',enables:'Cropping prints in the darkroom'},
+  key_basement:{name:'Basement key',kind:'key',desc:'Iron, cold, oddly heavy for its size.'},
+  watch:{name:"Grandfather's watch",kind:'tool',desc:'A pocket watch that keeps the island\'s time, which is not quite the mainland\'s. Press N to wait for a time.'},
+  cloth:{name:'Lens cloth',kind:'tool',desc:'Chamois, worn thin in the middle. Wipe the lens every morning or the day goes soft.'},
+  tin:{name:'Tinned fish',kind:'food',price:3,food:40,desc:'Herring in oil. Eats from the bag, anywhere. Forty on the meter.',enables:'Eating on the road'},
+  letter:{name:"Grandfather's letter",kind:'note',desc:'Water-damaged. Most of it is gone.'},
+  stone:{name:'Scratched stone',kind:'sample',desc:'From the cairn on the cliff. The same angle, cut again and again.'},
+  sample_feather:{name:'Feather, wrong color',kind:'sample',desc:'Found on the cliff after the object passed. No gull grew this.'},
+  sample_wetstone:{name:'Wet stone',kind:'sample',desc:'From the quay after the light. Still wet an hour later, in the bag.'},
+  sample_needles:{name:'Scorched needles',kind:'sample',desc:'From where it stood. Burnt in a ring, cold to the touch.'}};
+const PHENOMENA={
+  sky_object_v1:{id:'sky_object_v1',name:'Object over the water',category:'sky_object',zones:['lighthouse','boat'],slots:['Morning','Midday','Evening'],printOnly:false,trigger:'timer',every:[12,24],window:[4,8],size:8,dist:[700,1500],speed:0.08,emission:0,cue:null,mark:'UNKNOWN',sample:'sample_feather'},
+  harbor_lights:{id:'harbor_lights',name:'Light beneath the harbor',category:'light',zones:['harbor','boat'],slots:['Night'],printOnly:false,trigger:'timer',every:[28,48],window:[5,7],size:9,dist:[45,80],speed:0.05,emission:0.08,cue:'The water goes flat, like a held breath.',mark:'UNKNOWN',sample:'sample_wetstone'},
+  woods_entity:{id:'woods_entity',name:'The Tall Thing',category:'entity',zones:['woods'],slots:['Evening','Night'],printOnly:true,trigger:'still',still:4,window:[6,6],size:3.4,dist:[18,30],speed:0.1,emission:0,cue:'The birds stop. All of them, at once.',mark:'UNKNOWN',sample:'sample_needles'}};
+const RUMORS=[
+  {id:'lighthouse_morning',source:'Sigrún',zone:'lighthouse',slots:['Morning'],hint:null,text:'Lighthouse, before the fog lifts.',confidence:0.9,expiry:2},
+  {id:'harbor_lights',source:'Aksel',zone:'harbor',slots:['Night'],hint:'harbor_lights',text:'A light under the water by the north quay. Night, when the sea goes flat.',confidence:0.7,expiry:4},
+  {id:'woods_thing',source:'Tobias',zone:'woods',slots:['Evening','Night'],hint:'woods_entity',text:'Something in the woods by the fence. It only comes if you stand still.',confidence:0.5,expiry:4}];
+const HEADLINES={
+  sky_object:{front:['WHAT HANGS OVER THE POINT?','A SHAPE ABOVE THE WATER, AND NOW A PICTURE'],p3:['Odd Shape Photographed Above the Bay','Reader\'s Print Shows "Something" Off the Point'],p6:['Unexplained Mark in Cliff Photograph']},
+  light:{front:['THE HARBOR HAS A LIGHT BENEATH IT','WHAT BURNS UNDER THE NORTH QUAY?'],p3:['Glow Reported Under Harbor Water','Night Photograph Shows Light Below the Pier'],p6:['Harbor Light Puzzles Fishermen']},
+  entity:{front:['SOMETHING STANDS IN THE NORTH WOODS','FIGURE PHOTOGRAPHED AT THE TREELINE'],p3:['Photographer Reports Figure Near Fence Road','Tall Shape in Woods Photograph'],p6:['Woods Photo Raises Eyebrows']},
+  mundane:{front:['A MORNING AT THE POINT'],p3:['Island Scenes: Gulls and Fog'],p6:['Local Color: Along the Cliff Path','Local Color: Harbor at Dusk']}};
+const STORIES={
+  sky_object:['The photograph, taken from the cliff below the lighthouse, shows a dark shape above the water that the photographer says was not there. "I was shooting the tower," he told the Courier. "I only saw it in the print."','Harbor master Aksel Rønning said no aircraft were logged over the bay that morning. He added that the gulls had been quiet, which he did not like. The base declined to comment.','Readers who saw anything over the water are invited to write to the Courier. Letters will be printed at the editor\'s discretion, and some will not.'],
+  light:['For years fishermen have spoken of a glow beneath the water off the north quay, usually after a second glass. This week the Courier prints a photograph, and asks the fishermen\'s pardon.','The exposure was made at night with the camera on a stand. The photographer declined to speculate on the source. "It was there for a few seconds. Then the water closed over it."','The harbor office has no record of underwater work in the area. The base declined to comment. The tide tables on page 5 have been checked twice.'],
+  entity:['The Courier prints this photograph with hesitation. It was taken at the treeline near the fence road at dusk and shows a tall, narrow shape between the trunks. It does not show a face.','The photographer says he saw nothing while shooting, and that the birds had gone silent. Several readers have described the same silence this year, and one has moved to the mainland.','The Courier draws no conclusion. We invite readers to draw their own, carefully, and to keep their dogs in after dark.'],
+  mundane:['A quiet frame from the cliff path this week, sent in by the island\'s newest resident, who has taken up his late grandfather\'s camera.','The ferry ran late on Tuesday and Thursday. Fog is expected through the weekend, arriving, as it does now, against the wind.']};
+const LETTER=`<p>…the tide has a second voice under the first. You will hear it before you see anything. <s>xxxxxxxxxxxxxxxxxxxxxxxxxxxx</s></p><p>The light on the water does not come from the tower. <s>xxxxxxxxxxxxxxxxx</s> when it stands still, so must you. It will not come to a moving man.</p><p>Do not print the angles. Marit will tell you the same. <s>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</s> the lighthouse, again, and I think this time I will</p>`;
+const PAGES=[
+  {id:'p_sky',title:'Over the water',sketch:'A shape over the water, drawn six times, each time smaller. Under it: "it is not far. it is small. it waits for the fog to think."',sample:'sample_feather',unlock:'The feather is from no gull. He wrote in the margin: they leave the birds behind them, like a wake. You know now where to look, and how soon.',fx:()=>{PHENOMENA.sky_object_v1.every=[7,14];}},
+  {id:'p_harbor',title:'The north quay',sketch:'The quay from above. Three circles under the water, joined by a line. "flat sea. held breath. count to nine."',sample:'sample_wetstone',unlock:'The stone dries and wets again on its own, on the table, in a rhythm. He counted it too. Nine. The light will stay longer for you now.',fx:()=>{PHENOMENA.harbor_lights.every=[16,30];PHENOMENA.harbor_lights.window=[8,10];}},
+  {id:'p_woods',title:'Between the trunks',sketch:'Trunks. Between two of them a line too tall to be a man. Underlined three times: "STAND STILL."',sample:'sample_needles',unlock:'The needles are burnt in a ring the size of a footprint that is not a foot. He wrote: it comes sooner to a man who has stopped wanting it to. It comes sooner now.',fx:()=>{PHENOMENA.woods_entity.still=2.5;PHENOMENA.woods_entity.window=[9,9];}},
+  {id:'p_angle',title:'The angle',sketch:'The same angle, over and over, opening the wrong way. On the last line: "I have cut it into the attic door. From the inside."',sample:'stone',unlock:'The stone fits the page as if the page were drawn around it. The attic, then. The hammer is still on the stair. Not in this build.',fx:()=>{G.flags.atticHint=true;}}];
+const QUESTS=[
+  {id:'the_house',type:'story',title:'The house with one lamp',giver:'the island',when:()=>true,stages:[{t:'Sleep the first night in his house',d:()=>G.day>=1},{t:'Read what the water left of the letter',d:()=>!!G.flags.readLetter,h:'Kitchen table, at home'},{t:'Open the basement and develop a roll',d:()=>!!G.flags.devOnce,h:'The key appears once there is something to develop'}]},
+  {id:'before_the_fog',type:'lead',title:'Before the fog lifts',giver:'Sigrún',when:()=>!!G.flags.diner_day1,stages:[{t:'Shoot the lighthouse in the morning',d:()=>shotsFrom('lighthouse')>0,h:'Lighthouse cliff · Morning'},{t:'Develop the roll',d:()=>G.prints.some(p=>p.zone==='lighthouse')},{t:'Find what the print is holding',d:()=>G.prints.some(p=>p.discovered&&p.subject.category==='sky_object'),h:'Use the loupe in the darkroom'},{t:'Show it to Halldór',d:()=>(G.soldCount.sky_object||0)>0,h:'The Courier, Main street'}]},
+  {id:'something_sharp',type:'story',title:'Something sharp',giver:'Halldór',when:()=>!!G.flags.metEditor,stages:[{t:'Get Halldór a print he will run on the front page',d:()=>!!G.flags.firstFront,h:'Composite 70 or better. Reach, stillness, light.'}]},
+  {id:'the_angles',type:'story',title:'The angles',giver:'the letter',when:()=>!!G.flags.readLetter,stages:[{t:'Examine the cairn on the cliff and take the loose stone',d:()=>!!G.flags.cairn,h:'Lighthouse cliff, west of the tower'},{t:'Match the stone to page 4 at the kitchen table',d:()=>!!(G.pages&&G.pages.p_angle),h:'Home · kitchen table · pick the stone, then click page 4'},
+    {t:'Feather: watch the object pass over the water, then pick up what it leaves (lighthouse, Morning or Midday), and match it to page 1',d:()=>!!(G.pages&&G.pages.p_sky),h:'After it goes, a small turning item appears on the grass ahead of you. E to pick up.'},
+    {t:'Wet stone: wait for the light under the north quay (harbor, Night, tripod), pick up what it leaves at the quay edge, match it to page 2',d:()=>!!(G.pages&&G.pages.p_harbor),h:'The item appears at the front edge of the quay after the water closes.'},
+    {t:'Scorched needles: hold still in the woods until the birds stop (Evening or Night, tripod), pick up what it leaves, match it to page 3',d:()=>!!(G.pages&&G.pages.p_woods),h:'Where it stood. Then home, kitchen table, sample first, then the page.'},
+    {t:'Find what he cut into the attic door',d:()=>false,h:'Next build'}]},
+  {id:'lead_harbor',type:'lead',title:'The light under the quay',giver:'Aksel',when:()=>!!G.rumorLog.harbor_lights,stages:[{t:'Wait at the harbor at night with the tripod set',d:()=>shotsPhen('harbor_lights')>0,h:'Harbor · Night · tripod and ISO 400'},{t:'Develop it and find it',d:()=>G.prints.some(p=>p.discovered&&p.subject.phen==='harbor_lights')}]},
+  {id:'lead_woods',type:'lead',title:'What stands still',giver:'Tobias',when:()=>!!G.rumorLog.woods_thing,stages:[{t:'Stand still in the north woods at dusk or night',d:()=>shotsPhen('woods_entity')>0,h:'North woods · Evening or Night · tripod, hold still'},{t:'Develop it and find it',d:()=>G.prints.some(p=>p.discovered&&p.subject.phen==='woods_entity')}]},
+  {id:'the_sedan',type:'story',title:'The sedan',giver:'nobody',when:()=>!!G.flags.tier1,stages:[{t:'Do not let it catch you on the street with undeveloped film',d:()=>!!G.flags.tailEscaped,h:'Duck into the diner when the engine comes'}]},
+  {id:'aksels_boat',type:'story',title:"Aksel's boat",giver:'Aksel',when:()=>(G.trust.aksel||0)>=2,stages:[{t:'Ask Aksel to take you out on the water at dusk',d:()=>!!G.flags.boatTrip,h:'Harbor · Evening or Night · trust 2'}]}];
+function shotsFrom(zone){return G.prints.filter(p=>p.zone===zone).length+(G.roll?G.roll.shots.filter(s=>s.zone===zone).length:0)+G.exposed.reduce((n,r)=>n+r.shots.filter(s=>s.zone===zone).length,0);}
+function shotsPhen(id){return G.prints.filter(p=>p.subject.phen===id).length+(G.roll?G.roll.shots.filter(s=>s.subject.phen===id).length:0)+G.exposed.reduce((n,r)=>n+r.shots.filter(s=>s.subject.phen===id).length,0);}
+
+/* ---------------- state ---------------- */
+let G=null;
+function newGame(){G={day:0,time:18*60+40,slot:'Evening',money:30,attention:0,attentionVisible:false,publishedToday:false,loc:'harbor',
+  inv:{body:1,lens50:1,film100:1,letter:1,watch:1,cloth:1},food:70,lensDirty:false,routineDay:-1,ateBread:-1,people:{},eventsSeen:{},equip:{lens:'lens50',focal:135},roll:{iso:100,exp:12,shots:[],item:'film100'},exposed:[],
+  prints:[],printSeq:1,captured:{},clearCaptured:{},published:{},soldBest:{},soldCount:{},paper:{queue:[],issues:[],mood:1.0},
+  rumors:[],rumorLog:{},flags:{},tut:{},trust:{},talkedDay:{},topicsDone:{},zoneVisits:{},pages:{},quests:{},samplesTaken:{}};G.slot=bandOf(G.time/60);}
+function saveGame(){try{localStorage.setItem('islandphoto3.save',JSON.stringify(G));}catch(e){}}
+function loadGame(){try{const s=localStorage.getItem('islandphoto3.save');if(!s)return false;G=JSON.parse(s);G.pages=G.pages||{};G.quests=G.quests||{};G.samplesTaken=G.samplesTaken||{};G.people=G.people||{};G.eventsSeen=G.eventsSeen||{};if(G.food==null)G.food=70;if(G.routineDay==null)G.routineDay=-1;if(G.ateBread==null)G.ateBread=-1;if(!G.inv.watch)G.inv.watch=1;if(!G.inv.cloth)G.inv.cloth=1;return true;}catch(e){return false}}
+const has=id=>(G.inv[id]||0)>0;
+
+/* ---------------- clock ---------------- */
+function bandOf(h){h=((h%24)+24)%24;if(h>=6&&h<11)return'Morning';if(h>=11&&h<16)return'Midday';if(h>=16&&h<20.5)return'Evening';return'Night';}
+function fmtTime(){const h=Math.floor(G.time/60)%24,m=Math.floor(G.time%60);return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;}
+function addTime(min){const before=G.slot;G.time+=min;const f0=G.food;G.food=clamp(G.food-min/15,0,100);if(f0>=30&&G.food<30)toast('Your hands are getting unsteady. Eat something.',6000);if(f0>=10&&G.food<10)toast('You have not eaten. You cannot hold the camera still.',6000);G.slot=bandOf(G.time/60);if(G.slot!==before){G.flags.pendingTick=true;if(SC&&!LOCS[G.loc].interior)applyDaylight(SC.scene,false,true);toast(`${G.slot}. ${fmtTime()}.`);}
+  if(G.time>=26*60&&!G.flags.collapsing){G.flags.collapsing=true;collapse();}hud();}
+function processTick(){if(G.flags.pendingTick){G.flags.pendingTick=false;worldTick();}}
+const DAYKEYS=[[5.5,'Night'],[7.5,'Morning'],[12,'Midday'],[17.5,'Evening'],[21,'Night'],[30,'Night']];
+const DAY={Morning:{sky:0x8c9b91,zen:0x6f857e,near:10,far:320,hemi:[0xa9b8ad,0x2c3a2f,0.95],sun:[0xd8e2d2,0.45,-40,30,20],light:0.8},
+  Midday:{sky:0xa9b7b1,zen:0x7d99a3,near:20,far:420,hemi:[0xc9d6cf,0x38483b,1.1],sun:[0xf2efe0,0.8,-20,60,10],light:1.0},
+  Evening:{sky:0x3b4742,zen:0x22302e,near:6,far:190,hemi:[0x6d7a6f,0x1a1c1a,0.55],sun:[0xc99a68,0.4,60,8,-30],light:0.25},
+  Night:{sky:0x0b1418,zen:0x03070a,near:4,far:130,hemi:[0x2e4048,0x0c1414,0.6],sun:[0x9fb4c0,0.32,-30,40,-60],light:0.06}};
+function dayState(hour){let h=hour;if(h<5.5)h+=24;let a=DAYKEYS[0],b=DAYKEYS[1];for(let i=0;i<DAYKEYS.length-1;i++){if(h>=DAYKEYS[i][0]&&h<DAYKEYS[i+1][0]){a=DAYKEYS[i];b=DAYKEYS[i+1];break;}}
+  const A=DAY[a[1]],B=DAY[b[1]];const t=clamp((h-a[0])/(b[0]-a[0]),0,1);const tt=t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;const C=(x,y)=>new T.Color(x).lerp(new T.Color(y),tt);
+  return{sky:C(A.sky,B.sky),zen:C(A.zen,B.zen),near:lerp(A.near,B.near,tt),far:lerp(A.far,B.far,tt),hemiSky:C(A.hemi[0],B.hemi[0]),hemiGround:C(A.hemi[1],B.hemi[1]),hemiI:lerp(A.hemi[2],B.hemi[2],tt),sunC:C(A.sun[0],B.sun[0]),sunI:lerp(A.sun[1],B.sun[1],tt),sunPos:[lerp(A.sun[2],B.sun[2],tt),lerp(A.sun[3],B.sun[3],tt),lerp(A.sun[4],B.sun[4],tt)],light:lerp(A.light,B.light,tt),night:a[1]==='Night'&&b[1]==='Night'?1:(a[1]==='Night'?1-tt:b[1]==='Night'?tt:0)};}
+</script>
+<script>
+/* ---------------- 3D: renderer, toon materials, outlines, sky ---------------- */
+const R=new T.WebGLRenderer({canvas:gl,antialias:true,preserveDrawingBuffer:true});R.setPixelRatio(1);R.setSize(W,H,false);
+const GRAD=(()=>{const d=new Uint8Array([70,70,70,150,150,150,255,255,255]);const t=new T.DataTexture(d,3,1,T.RGBFormat);t.minFilter=T.NearestFilter;t.magFilter=T.NearestFilter;t.needsUpdate=true;return t;})();
+const HULL=new T.MeshBasicMaterial({color:0x06090a,side:T.BackSide});
+const CAM={main:new T.PerspectiveCamera(72,W/H,0.1,4000),photo:new T.PerspectiveCamera(27,1.5,0.1,4000),raised:false,focus:60,target:60,lock:false,tripod:false,tripodT:0,shakeY:0,shakeP:0,flash:0};
+CAM.main.layers.set(0);CAM.photo.layers.set(0);
+const PL={x:0,z:0,yaw:0,pitch:0,h:1.65,bob:0,movedFlag:false};
+let SC=null,SES=null;
+function M(c,o){return new T.MeshToonMaterial(Object.assign({color:c,gradientMap:GRAD,flatShading:true},o||{}));}
+function hull(m,w){if(!m.geometry)return;m.geometry.computeBoundingSphere();const r=m.geometry.boundingSphere?m.geometry.boundingSphere.radius:1;const k=1+(w||0.035)/Math.max(r,0.05);const h=new T.Mesh(m.geometry,HULL);h.scale.setScalar(k);h.layers.mask=m.layers.mask;m.add(h);return h;}
+function mesh(sc,geo,mat,x,y,z,noHull){const m=new T.Mesh(geo,mat);m.position.set(x,y,z);sc.add(m);if(!noHull)hull(m);return m;}
+function box(sc,w,h,d,c,x,y,z,o,noHull){return mesh(sc,new T.BoxGeometry(w,h,d),M(c,o),x,y,z,noHull);}
+function cyl(sc,rt,rb,h,c,x,y,z,seg,o){return mesh(sc,new T.CylinderGeometry(rt,rb,h,seg||7),M(c,o),x,y,z);}
+function cone(sc,r,h,c,x,y,z,seg,o){return mesh(sc,new T.ConeGeometry(r,h,seg||6),M(c,o),x,y,z);}
+function textTex(text,w,h,bg,fg,font){const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.fillStyle=bg;x.fillRect(0,0,w,h);x.fillStyle=fg;x.font=font||'bold 26px IBM Plex Mono';x.textAlign='center';x.textBaseline='middle';x.fillText(text,w/2,h/2);return new T.CanvasTexture(c);}
+function sign(sc,text,w,h,x,y,z,ry,bg,fg){const m=mesh(sc,new T.PlaneGeometry(w,h),new T.MeshLambertMaterial({map:textTex(text,512,128,bg||'#d8d2c0',fg||'#1b1814')}),x,y,z,true);m.rotation.y=ry||0;return m;}
+function label(text){const c=document.createElement('canvas');c.width=256;c.height=64;const x=c.getContext('2d');x.font='26px Special Elite';x.textAlign='center';x.textBaseline='middle';x.fillStyle='rgba(0,0,0,.55)';x.fillRect(48,14,160,36);x.fillStyle='#e9b85f';x.fillText(text,128,32);const s=new T.Sprite(new T.SpriteMaterial({map:new T.CanvasTexture(c),transparent:true,depthTest:false}));s.scale.set(2,0.5,1);return s;}
+function person(sc,color,x,z,yaw,name,hat,look){look=look||{};const g=new T.Group();const coat=new T.Mesh(new T.BoxGeometry(0.5,1.05,0.34),M(color));coat.position.y=0.98;g.add(coat);hull(coat);const head=new T.Mesh(new T.CylinderGeometry(0.16,0.14,0.3,6),M(0xd7b28f));head.position.y=1.7;g.add(head);hull(head);
+  if(hat){const h=new T.Mesh(look.cap?new T.CylinderGeometry(0.18,0.18,0.08,6):new T.CylinderGeometry(0.19,0.19,0.12,6),M(hat));h.position.y=1.9;g.add(h);hull(h);if(!look.cap){const b=new T.Mesh(new T.CylinderGeometry(0.27,0.27,0.02,8),M(hat));b.position.y=1.85;g.add(b);}}const legs=new T.Mesh(new T.BoxGeometry(0.4,0.5,0.3),M(0x24262b));legs.position.y=0.25;g.add(legs);hull(legs);
+  if(look.apron){const a=new T.Mesh(new T.BoxGeometry(0.4,0.7,0.06),M(0xd8d2c0));a.position.set(0,0.85,0.19);g.add(a);}if(look.glasses){for(const sx of[-0.07,0.07]){const r=new T.Mesh(new T.TorusGeometry(0.045,0.01,4,8),M(0x2a2d31));r.position.set(sx,1.72,0.15);g.add(r);}}
+  if(look.rope){const r=new T.Mesh(new T.TorusGeometry(0.16,0.05,5,10),M(0x8a7a5a));r.position.set(0.32,1.05,0);r.rotation.y=Math.PI/2;g.add(r);hull(r);}if(look.paper){const pp=new T.Mesh(new T.BoxGeometry(0.06,0.3,0.22),M(0xe8e1cf));pp.position.set(-0.3,1.05,0.05);g.add(pp);}if(look.cane){const c=new T.Mesh(new T.CylinderGeometry(0.015,0.015,0.9,5),M(0x3a2a1a));c.position.set(0.33,0.45,0.1);g.add(c);}if(look.bag){const bb=new T.Mesh(new T.BoxGeometry(0.22,0.26,0.12),M(0x5a6a3a));bb.position.set(0.3,0.9,-0.05);g.add(bb);hull(bb);}
+  g.scale.set(look.w||1,look.h||1,look.w||1);
+  if(name){const l=label(name);l.position.y=2.25;g.add(l);g.userData.label=l;}g.position.set(x,0,z);g.rotation.y=yaw||0;sc.add(g);g.userData.sway=Math.random()*6;SC.anim.push(t=>{g.rotation.z=Math.sin(t*0.9+g.userData.sway)*0.015;coat.position.y=0.98+Math.sin(t*1.4+g.userData.sway)*0.01;});return g;}
+function forest(sc,list){const trunkG=new T.CylinderGeometry(0.18,0.32,1,5),coneG=new T.ConeGeometry(1,1,5);const parts=[[trunkG,M(0x17130e),(h)=>[0.25*h,1,0.5*h,1]],[coneG,M(0x11201a),h=>[0.42*h,0.3*h,0.42*h,0.3*h]],[coneG,M(0x0d1710),h=>[0.62*h,0.25*h,0.42*h,0.25*h]],[coneG,M(0x11201a),h=>[0.82*h,0.19*h,0.42*h,0.19*h]]];
+  parts.forEach(([g,mat,f])=>{const im=new T.InstancedMesh(g,mat,list.length);const hm=new T.InstancedMesh(g,HULL,list.length);const o=new T.Object3D();list.forEach((tr,i)=>{const [y,sx,sy,sz]=f(tr.h);o.position.set(tr.x,y,tr.z);o.scale.set(sx,sy,sz);o.rotation.y=tr.r;o.updateMatrix();im.setMatrixAt(i,o.matrix);o.scale.set(sx*1.06,sy*1.03,sz*1.06);o.updateMatrix();hm.setMatrixAt(i,o.matrix);});sc.add(im);sc.add(hm);});}
+function gull(sc){const g=new T.Group();const m=M(0x2a2f33);const l=new T.Mesh(new T.BoxGeometry(0.55,0.04,0.16),m);l.position.x=-0.3;l.rotation.z=0.3;g.add(l);const r=new T.Mesh(new T.BoxGeometry(0.55,0.04,0.16),m);r.position.x=0.3;r.rotation.z=-0.3;g.add(r);g.userData.f=Math.random()*6;sc.add(g);SC.anim.push(t=>{const f=Math.sin(t*9+g.userData.f)*0.5;l.rotation.z=0.3+f;r.rotation.z=-0.3-f;});return g;}
+function sea(sc,y,c,size){const m=mesh(sc,new T.PlaneGeometry(size||5000,size||5000,1,1),M(c),0,y,0,true);m.rotation.x=-Math.PI/2;return m;}
+function stars(sc){const g=new T.BufferGeometry();const p=[];for(let i=0;i<420;i++){const a=Math.random()*6.283,b=Math.random()*1.2+0.08;p.push(Math.cos(a)*Math.cos(b)*1800,Math.sin(b)*1800,Math.sin(a)*Math.cos(b)*1800);}g.setAttribute('position',new T.Float32BufferAttribute(p,3));const s=new T.Points(g,new T.PointsMaterial({color:0xcfd8d4,size:2.2,sizeAttenuation:false,fog:false,transparent:true}));s.name='stars';s.raycast=()=>{};sc.add(s);return s;}
+function moon(sc){const c=document.createElement('canvas');c.width=64;c.height=64;const x=c.getContext('2d');const g=x.createRadialGradient(32,32,6,32,32,30);g.addColorStop(0,'rgba(214,232,210,1)');g.addColorStop(0.5,'rgba(180,205,190,.55)');g.addColorStop(1,'rgba(120,160,150,0)');x.fillStyle=g;x.fillRect(0,0,64,64);const s=new T.Sprite(new T.SpriteMaterial({map:new T.CanvasTexture(c),transparent:true,fog:false,depthWrite:false}));s.scale.set(90,90,1);s.position.set(-500,420,-1400);s.name='moon';s.raycast=()=>{};sc.add(s);return s;}
+function skyDome(sc){const mat=new T.ShaderMaterial({uniforms:{c0:{value:new T.Color(0x8c9b91)},c1:{value:new T.Color(0x7f948c)},c2:{value:new T.Color(0x6f857e)}},vertexShader:'varying float vy;void main(){vy=normalize(position).y;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',fragmentShader:'uniform vec3 c0,c1,c2;varying float vy;void main(){vec3 c=vy<0.03?c0:(vy<0.22?c1:c2);gl_FragColor=vec4(c,1.0);}',side:T.BackSide,depthWrite:false,fog:false});
+  const m=new T.Mesh(new T.SphereGeometry(1500,16,10),mat);m.renderOrder=-10;m.raycast=()=>{};m.name='sky';sc.add(m);return m;}
+function seaColor(){return{Morning:0x3a5253,Midday:0x2f5058,Evening:0x1b2226,Night:0x070d0e}[G.slot];}
+function groundColor(){return{Morning:0x3a4a3a,Midday:0x445640,Evening:0x25231f,Night:0x141c16}[G.slot];}
+function applyDaylight(sc,interior,update){const d=dayState(G.time/60);
+  if(interior){sc.background=new T.Color(0x0a0c0c);sc.fog=null;return;}
+  if(!update){sc.hemiL=new T.HemisphereLight(0xffffff,0x000000,1);sc.add(sc.hemiL);sc.sunL=new T.DirectionalLight(0xffffff,1);sc.add(sc.sunL);sc.sky=skyDome(sc);sc.starsL=stars(sc);sc.moonL=moon(sc);sc.fog=new T.Fog(0x000000,10,300);}
+  sc.background=d.sky;sc.fog.color.copy(d.sky);sc.fog.near=d.near;sc.fog.far=d.far;sc.hemiL.color.copy(d.hemiSky);sc.hemiL.groundColor.copy(d.hemiGround);sc.hemiL.intensity=d.hemiI;sc.sunL.color.copy(d.sunC);sc.sunL.intensity=d.sunI;sc.sunL.position.set(...d.sunPos);
+  sc.sky.material.uniforms.c0.value.copy(d.sky);sc.sky.material.uniforms.c1.value.copy(d.sky).lerp(d.zen,0.5);sc.sky.material.uniforms.c2.value.copy(d.zen);sc.starsL.material.opacity=d.night;sc.moonL.material.opacity=Math.max(0,d.night*0.9);sc.moonL.visible=d.night>0.05;}
+/* --- item models (procedural, low poly) --- */
+function itemModel(id){const g=new T.Group();const add=(geo,c,x,y,z,rx,ry,rz)=>{const m=new T.Mesh(geo,M(c));m.position.set(x||0,y||0,z||0);if(rx||ry||rz)m.rotation.set(rx||0,ry||0,rz||0);g.add(m);hull(m,0.012);return m;};
+  if(id==='body'){add(new T.BoxGeometry(1.3,0.8,0.5),0x2a2d31);add(new T.CylinderGeometry(0.28,0.3,0.45,10),0x111214,0.1,0,0.4,Math.PI/2);add(new T.BoxGeometry(0.5,0.22,0.3),0x444a4f,-0.35,0.5,0);add(new T.CylinderGeometry(0.08,0.08,0.1,8),0xb08a3a,0.45,0.48,0);add(new T.BoxGeometry(1.3,0.1,0.52),0x8f7a4a,0,-0.05,0);}
+  else if(id==='lens50'){add(new T.CylinderGeometry(0.34,0.36,0.5,12),0x1d1f22,0,0,0,Math.PI/2);add(new T.CylinderGeometry(0.37,0.37,0.08,12),0x8f7a4a,0,0,0.1,Math.PI/2);add(new T.CylinderGeometry(0.22,0.22,0.02,12),0x2b3f55,0,0,0.26,Math.PI/2);}
+  else if(id==='lens135'){add(new T.CylinderGeometry(0.34,0.3,1.3,12),0x1d1f22,0,0,0,Math.PI/2);add(new T.CylinderGeometry(0.37,0.37,0.1,12),0x8f7a4a,0,0,0.3,Math.PI/2);add(new T.CylinderGeometry(0.36,0.36,0.1,12),0x6a6a6a,0,0,-0.2,Math.PI/2);add(new T.CylinderGeometry(0.24,0.24,0.02,12),0x2b3f55,0,0,0.66,Math.PI/2);}
+  else if(id==='film100'||id==='film400'){add(new T.CylinderGeometry(0.32,0.32,0.95,12),0x2a2d31);add(new T.CylinderGeometry(0.33,0.33,0.45,12),id==='film400'?0x7a2b22:0xc9a23a,0,0.05,0);add(new T.CylinderGeometry(0.08,0.08,0.25,8),0x555,0,0.58,0);}
+  else if(id==='tripod'){for(let k=0;k<3;k++){const a=k*2.094;add(new T.CylinderGeometry(0.03,0.04,1.6,6),0x3a3f44,Math.sin(a)*0.35,-0.1,Math.cos(a)*0.35,Math.cos(a)*0.28,0,-Math.sin(a)*0.28);}add(new T.CylinderGeometry(0.14,0.1,0.18,8),0x8f7a4a,0,0.72,0);add(new T.BoxGeometry(0.3,0.06,0.3),0x2a2d31,0,0.84,0);}
+  else if(id==='enlarger'){add(new T.BoxGeometry(1.2,0.08,0.9),0x3a3f44,0,-0.6,0);add(new T.CylinderGeometry(0.05,0.05,1.3,6),0x555a5f,-0.45,0.05,0);add(new T.BoxGeometry(0.5,0.4,0.5),0x2a2d31,0,0.35,0);add(new T.CylinderGeometry(0.12,0.16,0.25,8),0x111214,0,0.02,0);}
+  else if(id==='key_basement'){add(new T.TorusGeometry(0.22,0.06,6,10),0x4a4f55,0,0.35,0);add(new T.BoxGeometry(0.1,0.8,0.1),0x4a4f55,0,-0.15,0);add(new T.BoxGeometry(0.22,0.1,0.1),0x4a4f55,0.1,-0.45,0);add(new T.BoxGeometry(0.15,0.1,0.1),0x4a4f55,0.07,-0.28,0);}
+  else if(id==='letter'){add(new T.BoxGeometry(1.1,0.03,0.8),0xd8d2c0);add(new T.BoxGeometry(0.5,0.035,0.2),0x9a8f7a,0.1,0.01,0.15);add(new T.BoxGeometry(0.7,0.035,0.06),0x6a6252,-0.1,0.01,-0.2);}
+  else if(id==='stone'){add(new T.DodecahedronGeometry(0.5,0),0x5f6462);add(new T.BoxGeometry(0.3,0.02,0.04),0x2a2d31,0,0.5,0,0,0.6,0);add(new T.BoxGeometry(0.02,0.02,0.3),0x2a2d31,0.05,0.5,0.08,0,0.6,0);}
+  else if(id==='sample_feather'){add(new T.ConeGeometry(0.18,1.2,4),0x5a3f6a,0,0,0,0,0,0.9).scale.z=0.2;add(new T.CylinderGeometry(0.02,0.02,1.3,4),0x2a2d31,0,0,0,0,0,0.9);}
+  else if(id==='sample_wetstone'){add(new T.SphereGeometry(0.42,6,4),0x2f3f44).scale.y=0.6;add(new T.SphereGeometry(0.2,6,4),0x3f5560,0.2,0.2,0.1);}
+  else if(id==='sample_needles'){add(new T.TorusGeometry(0.4,0.1,5,10),0x1a1410,0,0,0,Math.PI/2);for(let k=0;k<6;k++)add(new T.BoxGeometry(0.03,0.03,0.3),0x0f0c08,Math.cos(k)*0.4,0,Math.sin(k)*0.4,0,k,0);}
+  else if(id==='watch'){add(new T.CylinderGeometry(0.55,0.55,0.12,14),0xb08a3a,0,0,0,Math.PI/2);add(new T.CylinderGeometry(0.46,0.46,0.02,14),0xe8e1cf,0,0,0.07,Math.PI/2);add(new T.BoxGeometry(0.03,0.3,0.02),0x1b1814,0,0.12,0.09);add(new T.BoxGeometry(0.03,0.2,0.02),0x1b1814,0.08,0.05,0.09,0,0,-1.2);add(new T.TorusGeometry(0.08,0.02,5,10),0xb08a3a,0,0.66,0);for(let k=0;k<5;k++)add(new T.TorusGeometry(0.05,0.012,4,8),0xb08a3a,-0.1-k*0.12,0.7+k*0.03,0,0,k*0.5,0);}
+  else if(id==='cloth'){add(new T.BoxGeometry(0.9,0.05,0.7),0xc9b98a,0,0,0,0,0.4,0);add(new T.BoxGeometry(0.5,0.06,0.4),0xd8c99a,0.1,0.03,0.05,0,-0.3,0);}
+  else if(id==='tin'){add(new T.CylinderGeometry(0.42,0.42,0.28,12),0x9aa3a6);add(new T.CylinderGeometry(0.43,0.43,0.16,12),0x3f6f88,0,0,0);add(new T.CylinderGeometry(0.36,0.36,0.02,12),0xc9d6cf,0,0.15,0);}
+  else add(new T.BoxGeometry(0.6,0.6,0.6),0x555);return g;}
+function cameraProp(){const g=new T.Group();const body=new T.Mesh(new T.BoxGeometry(0.13,0.08,0.05),M(0x2a2d31));g.add(body);hull(body,0.004);const top=new T.Mesh(new T.BoxGeometry(0.05,0.022,0.03),M(0x444a4f));top.position.set(-0.035,0.05,0);g.add(top);hull(top,0.004);
+  const lens=new T.Mesh(new T.CylinderGeometry(0.028,0.03,0.05,10),M(0x111214));lens.rotation.x=Math.PI/2;lens.position.set(0.01,0,-0.045);g.add(lens);hull(lens,0.004);g.userData.lens=lens;g.scale.setScalar(0.55);g.position.set(0.3,-0.27,-0.55);g.rotation.set(-0.25,0.4,0.12);g.layers.set(0);return g;}
+/* --- subjects & hotspots --- */
+function subject(o,def){const s=Object.assign({obj:o,kind:'mundane',label:'Landscape',rarity:4,size:1,speed:0,emission:0,landmark:false,fence:false,printOnly:false,phen:null,category:'mundane'},def);SC.subjects.push(s);return s;}
+function hot(x,z,r,label,fn,opt){SC.hot.push(Object.assign({x,z,r,label,fn},opt||{}));}
+function sched(id){const b=G.slot;const S={sigrun:{Morning:'street',Midday:'street',Evening:'street'},halldor:{Morning:'street',Midday:'street',Evening:'street'},tobias:{Midday:'street',Evening:'woods',Night:'street'},aksel:{Morning:'harbor',Evening:'harbor',Night:'harbor'},marit:{Morning:'shop',Midday:'shop',Evening:'shop'},man:{Morning:'street',Midday:'street',Evening:'street',Night:'street'}};return (S[id]||{})[b]||null;}
+/* ---------------- locations ---------------- */
+const LOCS={
+  home:{name:"Grandfather's house",chart:[470,300],interior:true,build:buildHome},
+  street:{name:'Main street',chart:[480,395],build:buildStreet},
+  harbor:{name:'Harbor',chart:[790,430],zone:true,build:buildHarbor},
+  shop:{name:"Marit's shop",chart:[720,470],interior:true,build:buildShop,noPin:true},
+  lighthouse:{name:'Lighthouse cliff',chart:[118,262],zone:true,build:buildLighthouse},
+  woods:{name:'North woods',chart:[560,100],zone:true,build:buildWoods},
+  boat:{name:"Aksel's boat",chart:[860,330],zone:true,build:buildBoat,noPin:true}};
+function newScene(loc,spawn,bounds){const sc=new T.Scene();SC={loc,scene:sc,subjects:[],hot:[],npcs:{},obstacles:[],bounds,anim:[],t:0};PL.x=spawn.x;PL.z=spawn.z;PL.yaw=spawn.yaw||0;PL.pitch=0;sc.add(CAM.main);CAM.main.children.length=0;SC.prop=cameraProp();CAM.main.add(SC.prop);return sc;}
+function npc(sc,id,x,z,yaw){const N=NPCS[id];const g=person(sc,N.color,x,z,yaw,N.name,N.hat,N.look);SC.npcs[id]=g;hot(x,z,2.6,'Talk to '+N.name,()=>talk(id));return g;}
+function buildHome(){const sc=newScene('home',{x:0,z:2.1,yaw:0},{x:[-2.6,2.6],z:[-2.6,2.6]});applyDaylight(sc,true);
+  const wall=new T.MeshToonMaterial({color:0x3a3632,gradientMap:GRAD,side:T.BackSide});const room=new T.Mesh(new T.BoxGeometry(6,3,6),wall);room.position.y=1.5;sc.add(room);const fl=mesh(sc,new T.PlaneGeometry(6,6),M(0x2a231b),0,0.01,0,true);fl.rotation.x=-Math.PI/2;
+  const lamp=new T.PointLight(0xe9b85f,2.2,12,1.6);lamp.position.set(1.4,2.3,-1.2);sc.add(lamp);mesh(sc,new T.SphereGeometry(0.08,6,5),new T.MeshBasicMaterial({color:0xffe0a0}),1.4,2.3,-1.2,true);sc.add(new T.AmbientLight(0x3a4044,0.9));
+  box(sc,1.5,0.08,0.8,0x5a4a38,1.6,0.75,-1.9);for(const [x,z] of [[1,-1.55],[2.2,-1.55],[1,-2.25],[2.2,-2.25]])box(sc,0.06,0.75,0.06,0x3a3025,x,0.37,z);
+  box(sc,0.32,0.02,0.22,0xd8d2c0,1.35,0.8,-1.85);box(sc,0.12,0.03,0.05,0x8a8a80,1.95,0.81,-1.7);box(sc,0.42,0.28,0.26,0x2b2f34,2.05,0.93,-2.05);
+  const nb=box(sc,0.26,0.04,0.34,0x4a3a2a,1.62,0.81,-2.15);
+  box(sc,0.9,0.35,2,0x4a3f36,-2.2,0.25,-1.4);box(sc,0.8,0.12,0.5,0xd0c8b8,-2.2,0.48,-2.1);
+  box(sc,0.9,2.05,0.08,0x2a221a,-1.2,1.02,-2.95);box(sc,0.9,2.05,0.08,0x2a221a,0,1.02,2.95);box(sc,0.08,2.05,0.9,0x2a221a,2.95,1.02,0.6);
+  const d=dayState(G.time/60);const win=mesh(sc,new T.PlaneGeometry(1.1,1.0),new T.MeshBasicMaterial({color:d.sky}),-2.95,1.6,0.6,true);win.rotation.y=Math.PI/2;
+  box(sc,0.6,1.4,0.3,0x3b3229,2.6,0.7,-0.9);for(let k=0;k<4;k++)box(sc,0.5,0.02,0.24,0xd6d0be,2.6,0.4+k*0.3,-0.9);
+  const clock=box(sc,0.3,0.4,0.1,0x2a221a,0.9,2.0,-2.94);mesh(sc,new T.CircleGeometry(0.11,12),new T.MeshBasicMaterial({color:0xd8d2c0}),0.9,2.05,-2.88,true);const hand=box(sc,0.02,0.09,0.01,0x1b1814,0.9,2.08,-2.87,null,true);SC.anim.push(t=>{hand.rotation.z=-(G.time%720)/720*Math.PI*2;});
+  hot(-2.2,-1.4,1.6,()=>G.time/60>=19||G.time/60<5?'Bed — sleep until morning':'Bed — too early to sleep',()=>{if(G.time/60>=19||G.time/60<5)sleep();else say([{who:'',text:'The house creaks. It is not yet dark enough to sleep, and something in you wants the day used.'}]);});
+  hot(1.6,-1.9,1.5,'Kitchen table: the letter, the notebook',()=>{G.flags.readLetter=true;openNotebook();});
+  hot(-1.2,-2.4,1.4,()=>G.flags.basementKey?'Basement door — darkroom':'Basement door — locked',()=>{if(!G.flags.basementKey){say([{who:'',text:'Locked. The keyhole is cold enough to feel from here. The key is not on the table yet.'}]);return;}SFX.door();enterDarkroom();});
+  hot(0,2.4,1.4,()=>G.routineDay<G.day&&G.time/60<12?'Front door — morning routine, then out':'Front door — go out',()=>{SFX.door();if(G.routineDay<G.day&&G.time/60<12)openRoutine();else openMap();});
+  box(sc,0.7,1.1,0.4,0x3b3229,-2.6,0.55,2.2);hot(-2.6,2.2,1.4,()=>G.ateBread<G.day?'Cupboard — bread and a tin of something':'Cupboard — empty until tomorrow',()=>{if(G.ateBread<G.day){G.ateBread=G.day;eat(35,'Bread, hard, and something from a tin. It does the job.');}else say([{who:'',text:'Empty. Sigrún feeds people; the cupboard does not.'}]);});hot(2.6,0.6,1.4,'Attic stair — nailed shut',()=>say([{who:'',text:G.flags.atticHint?'Nailed shut from the outside, marked from the inside. The hammer is on the stair. Not in this build.':'The attic door is nailed shut from the outside. His hammer is still on the stair.'}]));hot(2.6,-0.9,1.4,'Print shelf',openPrints);
+  if(G.day===0&&!G.flags.houseSeen){G.flags.houseSeen=true;setTimeout(()=>say([{who:'',text:'One working lamp. Dust on everything. Three doors that do not open: attic, basement, roof.'},{who:'',text:'On the kitchen table: keys, a letter the damp has eaten, a notebook, and his camera bag. The rangefinder inside still works.'}]),600);}}
+function buildStreet(){const sc=newScene('street',{x:0,z:10,yaw:0},{x:[-5.6,5.6],z:[-34,13]});applyDaylight(sc);
+  const g=mesh(sc,new T.PlaneGeometry(400,400),M(groundColor()),0,0,0,true);g.rotation.x=-Math.PI/2;const road=mesh(sc,new T.PlaneGeometry(9,90),M(0x3b3a36),0,0.02,-12,true);road.rotation.x=-Math.PI/2;
+  const bld=(x,z,w,h,d,c,txt)=>{const b=box(sc,w,h,d,c,x,h/2,z,null,true);box(sc,w+0.4,0.5,d+0.4,0x22201c,x,h+0.2,z,null,true);if(txt)sign(sc,txt,Math.min(w-1,5),0.7,x+(x<0?w/2+0.02:-w/2-0.02),2.6,z,x<0?Math.PI/2:-Math.PI/2);
+    box(sc,0.9,2,0.1,0x2a221a,x+(x<0?w/2+0.02:-w/2-0.02),1,z+2,null,true).rotation.y=Math.PI/2;
+    if(G.slot==='Evening'||G.slot==='Night'){const l=new T.PointLight(0xe9b85f,0.6,12,2);l.position.set(x+(x<0?w/2+1:-w/2-1),2,z);sc.add(l);mesh(sc,new T.PlaneGeometry(0.9,0.9),new T.MeshBasicMaterial({color:0xf0c070}),x+(x<0?w/2+0.03:-w/2-0.03),1.7,z-1.6,true).rotation.y=x<0?Math.PI/2:-Math.PI/2;}return b;};
+  bld(-10,-6,8,4.5,10,0x4a3d32,'DINER');bld(10,-6,8,4.2,12,0x3d4248,'THE ISLAND COURIER');bld(-10,-20,8,4,9,0x453f36,'SCHOOL');bld(10,-21,8,3.6,7,0x3f3a34);bld(-10,6,8,3.4,7,0x3c3530);bld(10,8,8,3.8,8,0x433c33);
+  box(sc,8,12,10,0x4a4a4f,0,6,-44,null,true);const spire=cone(sc,3.2,26,0x35353a,0,25,-44,4);box(sc,0.3,2.2,0.3,0x2a2a2e,0,39,-44);sign(sc,'',1.2,2.4,0,1.2,-38.95,0,'#1a1714');subject(spire,{kind:'church',label:'The church',rarity:8,size:26,landmark:true});
+  for(let i=0;i<4;i++){box(sc,0.18,4,0.18,0x2a2a2e,-5,2,-30+i*12);if(G.slot!=='Midday'){const l=new T.PointLight(0xcfd8b0,0.5,10,2);l.position.set(-5,4,-30+i*12);sc.add(l);mesh(sc,new T.SphereGeometry(0.16,6,5),new T.MeshBasicMaterial({color:0xfff0c0}),-5,4.1,-30+i*12,true);}}
+  for(let i=0;i<2;i++){const s=gull(sc);SC.anim.push(t=>{s.position.set(Math.cos(t*0.25+i*3)*14,9+Math.sin(t*0.7+i)*2,-16+Math.sin(t*0.25+i*3)*10);s.rotation.y=t*0.25+i*3+Math.PI/2;});subject(s,{kind:'gull',label:'Gull',rarity:6,size:0.7,speed:0.4});}
+  if(G.day>=1&&G.slot!=='Night')streetDog(sc);
+  if(sched('sigrun')==='street')npc(sc,'sigrun',-5.2,-3,Math.PI/2);if(sched('halldor')==='street')npc(sc,'halldor',5.2,-3,-Math.PI/2);
+  if(G.day===0)npc(sc,'tobias',2,-14,Math.PI);else if(sched('tobias')==='street')npc(sc,'tobias',-3,-27,0.4);
+  hot(-5.2,-4.2,2.4,()=>G.slot==='Night'?'Diner — closed':'Duck into the diner',()=>{if(G.slot==='Night'){say([{who:'',text:'Closed. The chairs are on the tables and one lamp is on in the back, for nobody.'}]);return;}if(SC.tail&&SC.tail.active){SC.tail.active=false;SC.tail.g.visible=false;G.flags.tailEscaped=true;addTime(20);fade(()=>{say([{who:'',text:'You drink a coffee you do not want and watch the window. The sedan idles, then moves on. When you come out the street is empty.'}]);refreshQuests();});}else say([{who:'Sigrún',text:'Sit. Eggs and coffee is four. Coffee alone is a dollar and a look.',choices:null}]);setTimeout(()=>{if(MODE==='dlg')dinerMenu();},50);addTime(5);});
+  hot(0,-38.5,2.5,'Church door',()=>say([{who:'',text:'Locked. From the inside. Someone has scratched a shape into the wood at knee height: an angle that does not close.'}]));
+  hot(0,12,2.2,'Road — open the chart',openMap);hot(0,-33,2.5,'Fence road, south — open the chart',openMap);
+  if(G.flags.tier1){const sg=new T.Group();const car=new T.Mesh(new T.BoxGeometry(1.9,0.7,4.2),M(0x121417));car.position.y=0.5;sg.add(car);hull(car);const cab=new T.Mesh(new T.BoxGeometry(1.6,0.5,2),M(0x1c2126));cab.position.set(0,1.05,-0.4);sg.add(cab);hull(cab);for(const s of[-0.6,0.6]){const hl=new T.Mesh(new T.PlaneGeometry(0.3,0.15),new T.MeshBasicMaterial({color:0xfff0c0}));hl.position.set(s,0.55,-2.11);hl.rotation.y=Math.PI;sg.add(hl);}
+    const undeveloped=(G.roll&&G.roll.shots.length)||G.exposed.length;if(undeveloped&&!G.flags.tailEscapedToday){sg.position.set(3.2,0,26);sc.add(sg);SC.tail={g:sg,active:true,z:26,warned:false};}else{sg.position.set(4.4,0,5);sc.add(sg);if(sched('man')==='street')npc(sc,'man',3,4,-Math.PI/2);}}}
+function buildHarbor(){const sc=newScene('harbor',{x:0,z:2,yaw:0},{x:[-19,19],z:[-6.2,5]});applyDaylight(sc);
+  sea(sc,-0.6,seaColor());box(sc,42,1,14,0x4a4034,0,-0.5,0,null,true);for(let k=0;k<11;k++)box(sc,0.06,1.02,14,0x2a241c,-20+k*4,-0.5,0,null,true);
+  for(let i=0;i<5;i++){const x=-16+i*8;const p=box(sc,0.3,1.6,0.3,0x2c2419,x,0.8,-6.9);if(G.slot!=='Midday'){const l=new T.PointLight(0xffc978,0.7,14,2);l.position.set(x,1.9,-6.9);sc.add(l);mesh(sc,new T.SphereGeometry(0.13,6,5),new T.MeshBasicMaterial({color:0xffd48a}),x,1.75,-6.9,true);}subject(p,{kind:'post',label:'Pier post',rarity:3,size:1.6});}
+  const boat=(x,z,c,big)=>{const g=new T.Group();const hull_=new T.Mesh(new T.BoxGeometry(big?7:5,1,big?2.6:2),M(c));hull_.position.y=-0.2;g.add(hull_);hull(hull_);const mast=new T.Mesh(new T.CylinderGeometry(0.06,0.08,big?6:4.5,5),M(0xcfc8b8));mast.position.y=big?2.5:2;g.add(mast);hull(mast);if(big){const cab=new T.Mesh(new T.BoxGeometry(2.4,1.2,1.8),M(0xd8d2c0));cab.position.set(-1.5,0.9,0);g.add(cab);hull(cab);}
+    if(G.slot==='Night'||G.slot==='Evening'){const w=new T.Mesh(new T.PlaneGeometry(0.3,0.3),new T.MeshBasicMaterial({color:0xffc978}));w.position.set(0.5,0.5,1.01);g.add(w);}g.position.set(x,-0.4,z);sc.add(g);const a=Math.random()*6;SC.anim.push(t=>{g.position.y=-0.4+Math.sin(t*1.1+a)*0.08;g.rotation.z=Math.sin(t*0.9+a)*0.03;});return g;};
+  subject(boat(-8,-11,0x7a2a24,false),{kind:'boat',label:"Aksel's boat",rarity:8,size:5,speed:0.04,landmark:true});subject(boat(9,-16,0x5a4a3a,false),{kind:'boat',label:'Moored boat',rarity:8,size:5,speed:0.04});subject(boat(18,-13,0x3b3f44,true),{kind:'ferry',label:'The ferry',rarity:6,size:7,speed:0.02});
+  box(sc,14,4,6,0x3d4c52,8,2,10,null,true);box(sc,14.4,0.5,6.4,0x22201c,8,4.2,10,null,true);sign(sc,'CAMERA & REPAIR',5,0.7,8,3,6.98,0);box(sc,0.9,2,0.1,0x2a221a,6,1,6.98);
+  if(G.slot!=='Midday'&&G.slot!=='Night'){const l=new T.PointLight(0xe9b85f,0.7,10,2);l.position.set(6,2.2,6);sc.add(l);}
+  box(sc,10,3.2,5,0x4a3d32,-10,1.6,10,null,true);box(sc,0.6,0.3,0.6,0x6a5a45,-9,0.15,-4.6);cyl(sc,0.5,0.5,0.35,0x8a7a5a,-9,0.17,-4.6,8);
+  box(sc,600,4,60,0x1b2422,0,0,-330,null,true);
+  for(let i=0;i<3;i++){const s=gull(sc);SC.anim.push(t=>{s.position.set(Math.cos(t*0.3+i*2)*16,6+Math.sin(t*0.8+i)*1.5,-12+Math.sin(t*0.3+i*2)*8);s.rotation.y=t*0.3+i*2+Math.PI/2;});subject(s,{kind:'gull',label:'Gull',rarity:6,size:0.7,speed:0.4});}
+  if(G.flags.sedan){const car=box(sc,1.9,0.7,4.2,0x121417,15,0.35,3.5);box(sc,1.6,0.5,2,0x1c2126,15,0.9,3.2);subject(car,{kind:'sedan',label:'A plain sedan',rarity:12,size:4});}
+  if(sched('aksel')==='harbor')npc(sc,'aksel',-8,-4.2,-0.6);
+  hot(6,5.6,2.4,()=>sched('marit')==='shop'?"Marit's shop — go in":"Marit's shop — closed",()=>{if(sched('marit')!=='shop'){say([{who:'',text:'Closed. A lamp is on upstairs, and a shape at the window that does not move when you do.'}]);return;}SFX.door();enterLoc('shop');});
+  hot(-18,3.5,2.5,'Harbor road — open the chart',openMap);hot(18,-5.5,2.5,'The ferry ramp',()=>say([{who:'',text:'The ferry leaves once a day, when the fog allows. It has not allowed much lately.'}]));
+  if(G.day===0&&!G.flags.arrived){G.flags.arrived=true;setTimeout(()=>toast('Walk up the harbor road to the chart, then to Main street and the house with one lamp lit.',9000),9000);}}
+function buildShop(){const sc=newScene('shop',{x:0,z:2.4,yaw:0},{x:[-2.8,2.8],z:[-0.8,2.8]});applyDaylight(sc,true);
+  const wall=new T.MeshToonMaterial({color:0x3d4c52,gradientMap:GRAD,side:T.BackSide});const room=new T.Mesh(new T.BoxGeometry(8,3.2,7),wall);room.position.set(0,1.6,0);sc.add(room);const fl=mesh(sc,new T.PlaneGeometry(8,7),M(0x2a2620),0,0.01,0,true);fl.rotation.x=-Math.PI/2;
+  const lamp=new T.PointLight(0xe9b85f,2.4,14,1.6);lamp.position.set(0,2.6,0);sc.add(lamp);sc.add(new T.AmbientLight(0x40484c,0.9));
+  box(sc,5,1,0.8,0x4a3d32,0,0.5,-1.6);box(sc,5.2,0.08,0.9,0x2a221a,0,1.02,-1.6);box(sc,7.6,0.06,0.5,0x2a221a,0,2.1,-3.2);box(sc,7.6,0.06,0.5,0x2a221a,0,1.5,-3.2);
+  sign(sc,'HARBOR CAMERA & REPAIR',3.6,0.5,0,2.7,-3.45,0,'#c9c2a8','#1b1814');box(sc,0.9,2,0.08,0x2a221a,0,1,3.46);
+  const shelf=[['lens135',-2.6,2.1],['tripod',-1.3,1.5],['enlarger',0,2.1],['film400',1.3,2.1],['film100',2.6,2.1]];SC.stands=[];
+  shelf.forEach(([id,x,y])=>{const owned=ITEMS[id].kind!=='film'&&has(id);const st=cyl(sc,0.35,0.4,0.08,0x8f7a4a,x,y+0.04,-3.2,10);const m=itemModel(id);m.scale.setScalar(id==='tripod'?0.32:id==='enlarger'?0.3:0.3);m.position.set(x,y+0.35,-3.2);sc.add(m);m.visible=!owned;SC.stands.push({id,m});SC.anim.push(t=>{m.rotation.y=t*0.5+x;});
+    });
+  if(sched('marit')==='shop')npc(sc,'marit',0,-2.4,0);hot(0,2.8,1.6,'Door — back to the harbor',()=>{SFX.door();enterLoc('harbor');});}
+function buildLighthouse(){const sc=newScene('lighthouse',{x:0,z:14,yaw:0},{x:[-34,34],z:[-23,22]});applyDaylight(sc);
+  sea(sc,-12,seaColor());box(sc,80,22,50,0x2f3a2c,0,-11,0,null,true);box(sc,80,22,4,0x4a463e,0,-11.5,-26,null,true);const g=mesh(sc,new T.PlaneGeometry(80,50),M(groundColor()),0,0.02,0,true);g.rotation.x=-Math.PI/2;
+  for(let i=0;i<14;i++){let x=rnd(-34,34),z=rnd(-22,20);if(Math.hypot(x,z-14)<5)z-=12;const r=box(sc,rnd(0.6,2),rnd(0.3,0.9),rnd(0.6,1.6),0x4e4c45,x,0.2,z);r.rotation.y=rnd(0,3);}
+  const tw=cyl(sc,2.0,2.4,14,0xd9d4c8,14,7,-18,10);cyl(sc,2.1,2.1,1.2,0xa8302a,14,9.5,-18,10);cyl(sc,2.5,2.5,0.4,0x22262a,14,14.2,-18,10);mesh(sc,new T.CylinderGeometry(1.6,1.6,1.6,8),new T.MeshBasicMaterial({color:G.slot==='Midday'?0xd8d0b0:0xfff0b0}),14,15,-18,true);cone(sc,2.2,1.8,0x2a2d31,14,16.6,-18,8);
+  subject(tw,{kind:'lighthouse',label:'The lighthouse',rarity:8,size:17,landmark:true,emission:G.slot==='Night'?0.3:0});SC.obstacles.push({x:14,z:-18,r:3});
+  if(G.slot==='Evening'||G.slot==='Night'){const beam=new T.Mesh(new T.ConeGeometry(14,90,12,1,true),new T.MeshBasicMaterial({color:0xfff3c0,transparent:true,opacity:0.1,side:T.DoubleSide,depthWrite:false,fog:false}));beam.raycast=()=>{};beam.rotation.z=Math.PI/2;const pivot=new T.Group();pivot.position.set(14,15,-18);pivot.add(beam);beam.position.x=-45;sc.add(pivot);SC.anim.push(t=>{pivot.rotation.y=t*0.6;});const l=new T.PointLight(0xfff0b0,1.2,60,1.5);l.position.set(14,15,-18);sc.add(l);}
+  for(let i=0;i<3;i++)box(sc,0.9-i*0.2,0.35,0.7-i*0.15,0x6a675f,-8,0.2+i*0.35,-12);SC.obstacles.push({x:-8,z:-12,r:1});
+  hot(-8,-12,2.2,'Examine the cairn',()=>{if(!G.flags.cairn){G.flags.cairn=true;G.inv.stone=1;SFX.pick();say([{who:'',text:'A stack of flat stones, older than the tower. Every one has the same mark cut into it: an angle that opens the wrong way. One stone is loose. You take it.'},{who:'',text:'You will not be able to say later why you took it.'}],refreshQuests);}else say([{who:'',text:'The cairn. The stones look as if they have been counted recently.'}]);});
+  for(let i=0;i<5;i++){const s=gull(sc);const a=i*1.3,rr=12+i*4;SC.anim.push(t=>{s.position.set(Math.cos(t*0.35+a)*rr-4,6+Math.sin(t*0.9+a)*2.5+i,-20+Math.sin(t*0.35+a)*rr*0.6);s.rotation.y=t*0.35+a+Math.PI/2;});subject(s,{kind:'gull',label:'Gull',rarity:6,size:0.7,speed:0.4});}
+  const bt=new T.Group();const hull_=new T.Mesh(new T.BoxGeometry(11,2,4),M(G.slot==='Night'?0x141a22:0x3b3a3a));bt.add(hull_);const mast=new T.Mesh(new T.CylinderGeometry(0.15,0.2,8,5),M(0xcfc8b8));mast.position.y=4;bt.add(mast);bt.position.set(-120,-11.4,-360);sc.add(bt);SC.anim.push(t=>{bt.position.x=-120+t*0.5;});subject(bt,{kind:'boat',label:'Fishing boat',rarity:10,size:11,speed:0.15});
+  hot(0,20,2.5,'Cliff path — open the chart',openMap);}
+function buildWoods(){const sc=newScene('woods',{x:0,z:4,yaw:0},{x:[-30,14],z:[-46,7]});applyDaylight(sc);
+  const g=mesh(sc,new T.PlaneGeometry(300,300),M({Morning:0x2c3527,Midday:0x33402c,Evening:0x1a1a16,Night:0x121a14}[G.slot]),0,0,0,true);g.rotation.x=-Math.PI/2;
+  const trees=[];for(let i=0;i<120;i++){const x=rnd(-40,40),z=rnd(-70,2);if(Math.hypot(x,z-4)<5||(x>15&&x<19))continue;trees.push({x,z,h:rnd(9,17),r:rnd(0,6)});SC.obstacles.push({x,z,r:0.55});}forest(sc,trees);
+  let fence;for(let i=0;i<14;i++){const z=-58+i*5;const p=box(sc,0.16,2.6,0.16,0x6a6f70,17,1.3,z);if(i===6)fence=p;box(sc,0.02,0.02,5,0x8a9092,17,2.4,z+2.5,null,true);box(sc,0.02,0.02,5,0x8a9092,17,1.4,z+2.5,null,true);box(sc,0.02,0.02,5,0x8a9092,17,0.5,z+2.5,null,true);if(i%4===1)sign(sc,'RESTRICTED · NO PHOTOGRAPHY',1.6,0.5,16.95,1.7,z,-Math.PI/2,'#c9c2a8','#7a2b22');}
+  subject(fence,{kind:'fence',label:'The base fence',rarity:5,size:2.6,fence:true,landmark:true});
+  box(sc,2,18,2,0x2a2d30,44,9,-24);if(G.slot==='Night'){const cone_=new T.Mesh(new T.ConeGeometry(10,70,12,1,true),new T.MeshBasicMaterial({color:0xfff6c8,transparent:true,opacity:0.0,side:T.DoubleSide,depthWrite:false,fog:false}));cone_.raycast=()=>{};const piv=new T.Group();piv.position.set(44,18,-24);cone_.rotation.z=Math.PI/2;cone_.position.x=-35;piv.add(cone_);sc.add(piv);SC.searchlight=cone_;SC.anim.push(t=>{piv.rotation.y=-2.2+Math.sin(t*0.5)*0.7;});}
+  if(sched('tobias')==='woods')npc(sc,'tobias',12,-6,-1.2);
+  hot(0,6,2.5,'Path back — open the chart',openMap);}
+function buildBoat(){const sc=newScene('boat',{x:0,z:0.5,yaw:0},{x:[-1.3,1.3],z:[-1.6,1.8]});applyDaylight(sc);
+  sea(sc,-0.9,seaColor());const deck=new T.Group();const hull_=new T.Mesh(new T.BoxGeometry(3.4,1,6),M(0x7a2a24));hull_.position.y=-0.5;deck.add(hull_);hull(hull_);const rail=new T.Mesh(new T.BoxGeometry(3.6,0.06,0.06),M(0xcfc8b8));rail.position.set(0,0.9,-3);deck.add(rail);const mast=new T.Mesh(new T.CylinderGeometry(0.08,0.1,5,5),M(0xcfc8b8));mast.position.set(0,2.5,1.2);deck.add(mast);hull(mast);const cab=new T.Mesh(new T.BoxGeometry(1.6,1.1,1.4),M(0xd8d2c0));cab.position.set(0,0.55,2.4);deck.add(cab);hull(cab);sc.add(deck);SC.deck=deck;
+  const shore=new T.Group();sc.add(shore);SC.shore=shore;const S=(geo,c,x,y,z,noH)=>{const m=new T.Mesh(geo,M(c));m.position.set(x,y,z);shore.add(m);if(!noH)hull(m);return m;};
+  S(new T.BoxGeometry(600,6,80),0x1b2422,0,-3,-160,true);S(new T.BoxGeometry(700,3,60),0x2a3430,0,-1.5,-125,true);
+  const hangar=S(new T.BoxGeometry(24,7,14),0x3a3f44,-20,3.5,-120);S(new T.CylinderGeometry(7,7,24,8),0x2f3438,-20,7,-120).rotation.z=Math.PI/2;S(new T.BoxGeometry(2,18,2),0x2a2d30,30,9,-118);
+  for(let i=0;i<24;i++){const x=-110+i*10;const p=S(new T.BoxGeometry(0.16,2.6,0.16),0x6a6f70,x,1.3,-92);if(i===12)subject(p,{kind:'fence',label:'The base fence',rarity:5,size:2.6,fence:true,landmark:true});S(new T.BoxGeometry(10,0.02,0.02),0x8a9092,x+5,2.4,-92,true);S(new T.BoxGeometry(10,0.02,0.02),0x8a9092,x+5,1.3,-92,true);}
+  subject(hangar,{kind:'hangar',label:'The base hangar',rarity:30,size:14,landmark:true,fence:true});
+  for(let i=0;i<3;i++){const l=S(new T.SphereGeometry(0.25,6,5),0xfff0c0,-40+i*30,6,-100,true);l.material=new T.MeshBasicMaterial({color:0xfff0c0});}
+  if(G.slot==='Night'){const cone_=new T.Mesh(new T.ConeGeometry(12,80,12,1,true),new T.MeshBasicMaterial({color:0xfff6c8,transparent:true,opacity:0.12,side:T.DoubleSide,depthWrite:false,fog:false}));cone_.raycast=()=>{};const piv=new T.Group();piv.position.set(30,18,-118);cone_.rotation.z=Math.PI/2;cone_.position.x=-40;piv.add(cone_);shore.add(piv);SC.anim.push(t=>{piv.rotation.y=1.2+Math.sin(t*0.4)*0.9;});}
+  const quay=S(new T.BoxGeometry(42,1,14),0x4a4034,0,-0.5,60,true);for(let i=0;i<5;i++){S(new T.BoxGeometry(0.3,1.6,0.3),0x2c2419,-16+i*8,0.8,53);}
+  npc(sc,'aksel',0,-1.2,Math.PI);SC.hot=SC.hot.filter(h=>!h.label.startsWith('Talk'));hot(0,-1.2,2.4,'Aksel — ask him to turn back',()=>{say([{who:'Aksel',text:"Seen enough? She doesn't like it this close either."}],()=>{G.flags.boatTrip=true;addTime(40);enterLoc('harbor');refreshQuests();});});
+  SC.anim.push(t=>{shore.position.x=-t*0.9;shore.position.z=Math.sin(t*0.05)*10;deck.position.y=Math.sin(t*1.3)*0.12;deck.rotation.z=Math.sin(t*0.9)*0.035;deck.rotation.x=Math.sin(t*0.7)*0.02;});
+  setTimeout(()=>cue('The engine sounds wrong out here, like it is underwater and you are not.',5000),1500);}
+/* --- phenomena in 3D --- */
+function fwd(yaw){return{x:-Math.sin(yaw),z:-Math.cos(yaw)};}
+function spawnPhen(ph,nearAim){const sc=SC.scene;let g,pos;
+  if(ph.id==='sky_object_v1'){g=new T.Mesh(new T.SphereGeometry(ph.size/2,8,5),M(0x1c2024,{fog:false}));g.scale.y=0.32;const d=G.day<=1&&!SES.ufoGuaranteed?rnd(1200,1500):rnd(ph.dist[0],ph.dist[1]);const b=nearAim?PL.yaw+rnd(-0.1,0.1):PL.yaw+rnd(-0.6,0.6);const el=nearAim?clamp(PL.pitch+rnd(0.02,0.1),0.06,0.2):rnd(0.07,0.17);const f=fwd(b);pos=new T.Vector3(PL.x+f.x*d*Math.cos(el),PL.h+Math.sin(el)*d,PL.z+f.z*d*Math.cos(el));}
+  else if(ph.id==='harbor_lights'){g=new T.Group();for(let k=0;k<3;k++){const c=document.createElement('canvas');c.width=64;c.height=64;const x=c.getContext('2d');const gr=x.createRadialGradient(32,32,2,32,32,30);gr.addColorStop(0,'rgba(150,240,200,.9)');gr.addColorStop(0.5,'rgba(60,160,140,.35)');gr.addColorStop(1,'rgba(20,80,90,0)');x.fillStyle=gr;x.fillRect(0,0,64,64);const s=new T.Sprite(new T.SpriteMaterial({map:new T.CanvasTexture(c),transparent:true,blending:T.AdditiveBlending,depthWrite:false}));s.scale.set(ph.size*(0.7+k*0.2),ph.size*0.45,1);s.position.set(Math.cos(k*2.1)*3,0,Math.sin(k*2.1)*2);g.add(s);}const l=new T.PointLight(0x7fe0c0,0.8,40,2);g.add(l);
+    if(G.loc==='boat'){const f=fwd(PL.yaw+rnd(-0.5,0.5));const d=rnd(ph.dist[0],ph.dist[1]);pos=new T.Vector3(f.x*d,-0.6,f.z*d);}else pos=new T.Vector3(PL.x+rnd(-18,18),-0.45,-7-rnd(ph.dist[0],ph.dist[1]));}
+  else{g=new T.Group();const m=M(0x050505);const body=new T.Mesh(new T.CylinderGeometry(0.16,0.22,ph.size*0.85,5),m);body.position.y=ph.size*0.42;g.add(body);const head=new T.Mesh(new T.SphereGeometry(0.18,6,4),m);head.position.y=ph.size*0.85+0.1;g.add(head);for(const s of [-1,1]){const arm=new T.Mesh(new T.CylinderGeometry(0.05,0.07,ph.size*0.7,4),m);arm.position.set(s*0.3,ph.size*0.45,0);arm.rotation.z=s*0.25;g.add(arm);}g.traverse(o=>o.layers.set(1));const d=rnd(ph.dist[0],ph.dist[1]);const b=PL.yaw+rnd(-0.14,0.14);const f=fwd(b);pos=new T.Vector3(PL.x+f.x*d,0,PL.z+f.z*d);}
+  g.position.copy(pos);sc.add(g);const sub=subject(g,{kind:'phen',label:ph.name,rarity:CATS[ph.category].rarity,size:ph.size,speed:ph.speed,emission:ph.emission,printOnly:ph.printOnly,phen:ph.id,category:ph.category});
+  const a={ph,obj:g,sub,t0:SES.t,dur:rnd(ph.window[0],ph.window[1]),drift:ph.id==='sky_object_v1'?new T.Vector3(rnd(-3,3),0,rnd(-1,1)):null};SES.active.push(a);
+  if(ph.cue){cue(ph.cue,ph.window[1]*1000);if(ph.id==='woods_entity')duck('birds',0,ph.window[1]*1000+2000);else duck('surf',0,ph.window[1]*1000+2000);}return a;}
+function despawn(a){SC.scene.remove(a.obj);SC.subjects=SC.subjects.filter(s=>s!==a.sub);const ph=a.ph;if(ph.sample&&!G.samplesTaken[ph.sample]&&G.loc!=='boat'){const p=a.obj.position;let x,z;if(ph.id==='sky_object_v1'){x=PL.x+rnd(-4,4);z=PL.z-rnd(3,7);}else if(ph.id==='harbor_lights'){x=clamp(p.x,-18,18);z=-5.8;}else{x=p.x;z=p.z;}
+    const m=itemModel(ph.sample);m.scale.setScalar(0.5);m.position.set(x,0.25,z);SC.scene.add(m);SC.anim.push(t=>{m.rotation.y=t*0.8;});const h={x,z,r:2.2,label:'Pick up: '+ITEMS[ph.sample].name.toLowerCase(),fn:()=>{G.inv[ph.sample]=1;G.samplesTaken[ph.sample]=true;SC.scene.remove(m);SC.hot=SC.hot.filter(q=>q!==h);SFX.pick();toast(`${ITEMS[ph.sample].name}. It goes in the bag. The notebook might want it.`,6000);refreshQuests();}};SC.hot.push(h);const l=label('?');l.position.set(x,1.1,z);SC.scene.add(l);h.marker=l;const f0=h.fn;h.fn=()=>{SC.scene.remove(l);f0();};setTimeout(()=>cue('Something was left behind where it was: '+ITEMS[ph.sample].name.toLowerCase()+'. Look for the mark.',4500),1200);}}
+</script>
+<script>
+/* ---------------- player, session, camera ---------------- */
+const keys=new Set();
+let MODE='title', dbg=false, cardsBusy=false, lastT=0;
+function panelOpen(){return !!document.querySelector('.panel.on');}
+function enterLoc(id){const L=LOCS[id];fade(()=>{disposeScene();G.loc=id;L.build();SES=L.zone?newSession(id):null;CAM.raised=false;CAM.tripod=false;CAM.tripodT=0;CAM.focus=60;gl.style.filter='';MODE=panelOpen()?'panel':'world';applyAudio();hud();prompt('');
+    if(L.zone){const rum=G.rumors.find(r=>r.zone===id);toast(`${L.name} · ${fmtTime()}${rum&&!rum.slots.includes(G.slot)?' — the lead said '+rum.slots.join('/')+'.':''}`);if(!G.roll)toast('No film in the camera. Load a roll from the bag (I).',6000);}
+    else{toast(`${L.name} · Day ${G.day}, ${fmtTime()}`);processTick();}
+    if(id==='lighthouse'&&!G.tut.raise)G.tut.stage=1;else G.tut.stage=0;
+    if(SES&&G.day>=1&&(G.slot==='Night'||G.slot==='Evening')&&id!=='boat')setTimeout(()=>cue('Set up and wait. Watch for cues. Space passes time.',4000),900);refreshQuests();if(G.day>=1)setTimeout(rollEvent,1600);saveGame();},450);}
+function disposeScene(){if(!SC)return;SC.scene.traverse(o=>{if(o.geometry&&!o.isInstancedMesh)o.geometry.dispose();if(o.material&&o.material!==HULL){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{if(m.map)m.map.dispose();if(m!==HULL)m.dispose();});}});SC=null;}
+function newSession(zone){const s={zone,t:0,timers:{},active:[],shots:0,waited:0,stillT:0,lastPhen:null,lastShotAt:-99,stillDone:false,ufoGuaranteed:false,fog:G.day===1&&zone==='lighthouse'&&G.slot==='Morning',slDone:false,slT:0,handHint:false,lookMoved:0};
+  Object.values(PHENOMENA).forEach(ph=>{if(ph.zones.includes(zone)&&ph.slots.includes(G.slot))s.timers[ph.id]=ph.trigger==='timer'?rnd(7,15):null;});G.zoneVisits[zone]=(G.zoneVisits[zone]||0)+1;return s;}
+function applyAudio(){auInit();const L=LOCS[G.loc];const night=G.slot==='Night',dusk=G.slot==='Evening';const P={home:{clock:0.12,wind:0.03,drone:night?0.03:0},shop:{clock:0.06,wind:0.02},street:{wind:0.05,street:0.08,birds:night?0:0.05,drone:night?0.05:0},harbor:{surf:0.09,rigging:0.1,birds:night?0:0.06,wind:0.04,drone:night?0.06:dusk?0.02:0},lighthouse:{wind:0.12,surf:0.14,birds:night?0:0.08,drone:night?0.05:0},woods:{trees:0.1,birds:night?0.02:0.09,wind:0.03,drone:night?0.07:dusk?0.03:0},boat:{surf:0.14,rigging:0.14,wind:0.06,drone:night?0.07:0.03}}[G.loc]||{};setAmbient(P);}
+function updatePlayer(dt){PL.movedFlag=false;if(CAM.tripod)return;const f=(keys.has('KeyW')||keys.has('ArrowUp')?1:0)-(keys.has('KeyS')||keys.has('ArrowDown')?1:0),r=(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0);
+  if(f||r){const sp=(G.day===0?2.4:3.4)*(G.food<30?0.75:1)*dt/Math.hypot(f,r);const sy=Math.sin(PL.yaw),cy=Math.cos(PL.yaw);let nx=PL.x+(-sy*f+cy*r)*sp,nz=PL.z+(-cy*f-sy*r)*sp;const b=SC.bounds;nx=clamp(nx,b.x[0],b.x[1]);nz=clamp(nz,b.z[0],b.z[1]);
+    for(const o of SC.obstacles){const dx=nx-o.x,dz=nz-o.z,d=Math.hypot(dx,dz)||0.001;if(d<o.r+0.45){const push=o.r+0.45-d;nx+=dx/d*push;nz+=dz/d*push;}}
+    PL.x=nx;PL.z=nz;PL.movedFlag=true;const pb=PL.bob;PL.bob+=dt*9;if(Math.floor(PL.bob/Math.PI)!==Math.floor(pb/Math.PI))SFX.step();}}
+function placeCameras(){const walking=PL.movedFlag;const bob=walking?Math.sin(PL.bob)*0.035:0;const boat=G.loc==='boat';const k=((CAM.raised&&!CAM.tripod)?0.0022*Math.sqrt(focalNow()/50)*(boat?2.6:1):(boat?0.002:0))*(G.food<30?1.7:1);const t=SC.t;
+  CAM.shakeY=k*(Math.sin(t*1.7)+0.6*Math.sin(t*3.1+1)+0.3*Math.sin(t*7.3));CAM.shakeP=k*(Math.cos(t*1.3+2)+0.5*Math.sin(t*2.9));const by=boat?Math.sin(t*1.3)*0.12:0;
+  const c=CAM.main;c.position.set(PL.x,PL.h+bob+by,PL.z);c.rotation.set(PL.pitch+(boat?Math.sin(t*0.7)*0.02:0),PL.yaw,boat?Math.sin(t*0.9)*0.035:0,'YXZ');const p=CAM.photo;p.position.copy(c.position);p.rotation.set(PL.pitch+CAM.shakeP+(boat?Math.sin(t*0.7)*0.02:0),PL.yaw+CAM.shakeY,boat?Math.sin(t*0.9)*0.035:0,'YXZ');p.fov=2*Math.atan(12/focalNow())*180/Math.PI;p.updateProjectionMatrix();
+  if(SC.prop){SC.prop.visible=!CAM.raised&&has('body');SC.prop.userData.lens.scale.y=G.equip.lens==='lens135'?2.4:1;SC.prop.userData.lens.position.z=G.equip.lens==='lens135'?-0.08:-0.045;}}
+const RAY=new T.Raycaster();RAY.layers.set(0);
+function afTarget(){const far=G.loc==='woods'?38:LOCS[G.loc].interior?6:900;RAY.setFromCamera({x:0,y:0},CAM.photo);RAY.far=far;const hits=RAY.intersectObjects(SC.scene.children,true);const h=hits.find(h=>h.object.type!=='Points'&&h.object.visible&&h.object.material!==HULL&&!(SC.prop&&h.object.parent===SC.prop));return h?clamp(h.distance,0.4,far):far;}
+let afClock=0;
+function updateCamera(dt){if(CAM.raised){afClock+=dt;if(afClock>0.08){afClock=0;CAM.target=afTarget();}const lf=Math.log(CAM.focus),lt=Math.log(CAM.target);const nf=lf+(lt-lf)*(1-Math.exp(-dt/0.32));CAM.focus=Math.exp(nf);const miss=Math.abs(lt-nf);
+    const wasLock=CAM.lock;CAM.lock=miss<0.05;if(CAM.lock&&!wasLock)SFX.lock();gl.style.filter=`blur(${Math.min(5,miss*5).toFixed(2)}px)`;}
+  else{gl.style.filter='';CAM.lock=false;}
+  if(CAM.tripod&&CAM.tripodT<1)CAM.tripodT=Math.min(1,CAM.tripodT+dt/1.4);if(CAM.flash>0)CAM.flash-=dt;}
+function toggleCamera(){if(!has('body'))return;CAM.raised=!CAM.raised;if(CAM.raised)SFX.raise();else SFX.lower();if(CAM.raised){CAM.target=afTarget();}if(G.tut.stage===1&&CAM.raised){G.tut.stage=2;setTimeout(()=>{if(G.tut.stage===2)G.tut.stage=3;},3500);}}
+function updateSession(dt){const S=SES;S.t+=dt;const moved=S.lookMoved;S.lookMoved=0;
+  if(CAM.raised&&CAM.tripod&&CAM.tripodT>=1&&moved<0.002&&G.food>=10)S.stillT+=dt;else S.stillT=0;
+  if(CAM.raised&&!CAM.tripod&&moved<0.002&&!PL.movedFlag){S.handStill=(S.handStill||0)+dt;if(S.handStill>4&&!S.handHint&&S.zone==='woods'){S.handHint=true;cue('You cannot hold still enough by hand. Not still enough for it.');}}else S.handStill=0;
+  Object.entries(S.timers).forEach(([id,tm])=>{const ph=PHENOMENA[id];if(ph.trigger==='timer'&&tm!==null){S.timers[id]=tm-dt;if(S.timers[id]<=0){spawnPhen(ph);S.timers[id]=rnd(ph.every[0],ph.every[1]);}}if(ph.trigger==='still'&&!S.stillDone&&S.stillT>=ph.still){spawnPhen(ph,true);S.stillDone=true;}});
+  S.active=S.active.filter(a=>{if(a.drift)a.obj.position.addScaledVector(a.drift,dt);if(a.ph.id==='harbor_lights')a.obj.children.forEach((c,i)=>{if(c.isSprite)c.material.opacity=0.6+0.4*Math.sin(S.t*2+i);});
+    if(a.ph.trigger==='still'&&S.t-a.t0>0.5&&(moved>0.012||PL.movedFlag)){cue('Something moved off between the trunks. Or nothing did.');despawn(a);return false;}
+    if(S.t>a.t0+a.dur){if(a.ph.cue)cue(a.ph.id==='woods_entity'?"The birds start again. It's gone. Maybe tomorrow.":"The water closes over it. Maybe tomorrow.");despawn(a);return false;}return true;});
+  if(S.zone==='woods'&&G.slot==='Night'&&SC.searchlight){if(!S.slDone&&S.t>20){S.slDone=true;S.slT=1;G.flags.base_foreshadow=true;cue('A light from the base side sweeps the treeline once. Nobody comments.',5000);}if(S.slT>0){S.slT=Math.max(0,S.slT-dt*0.1);SC.searchlight.material.opacity=0.14*Math.min(1,S.slT*2);}}
+  if(S.fog&&(S.shots>=12||S.t>150)){S.fog=false;cue('The fog lifts off the water. It goes out against the wind.');}}
+function updateTail(dt){const Tl=SC.tail;if(!Tl||!Tl.active)return;if(!Tl.warned&&SC.t>3){Tl.warned=true;SFX.engine();cue('An engine, slow, behind you. A sedan turns onto Main street.',5000);}if(SC.t<3)return;
+  Tl.z-=dt*1.7;Tl.g.position.z=Tl.z;const d=Math.hypot(Tl.g.position.x-PL.x,Tl.z-PL.z);if(d<2.7){Tl.active=false;G.flags.tailCaught=true;const lost=(G.roll&&G.roll.shots.length?1:0)+G.exposed.length;if(G.roll&&G.roll.shots.length)G.roll=null;G.exposed=[];
+    say([{who:'The Man',text:'"Fine morning." He does not look at you. He looks at the camera. "You have film in there that belongs to nobody. I will take it, and you will let me, and then it will be a fine morning again."'},{who:'',text:`He takes ${lost} roll${lost===1?'':'s'}. He is polite about it. The sedan is gone before the door of the diner finishes closing.`}],()=>{hud();refreshQuests();});}
+  if(Tl.z<-36){Tl.active=false;Tl.g.visible=false;G.flags.tailEscaped=true;refreshQuests();}}
+function fieldWait(){if(!SES)return;SES.waited++;fade(()=>{SES.t+=12;addTime(15);Object.keys(SES.timers).forEach(id=>{if(SES.timers[id]!==null)SES.timers[id]-=12;});cue('…');},250);}
+function projectAll(){const list=[];const v=new T.Vector3();const fpx=(FRAME.h/2)/Math.tan(CAM.photo.fov/2*Math.PI/180);
+  SC.subjects.forEach(s=>{if(!s.obj)return;s.obj.getWorldPosition(v);if(s.phen==='woods_entity')v.y+=s.size/2;const d=v.distanceTo(CAM.photo.position);const p=v.clone().project(CAM.photo);if(p.z>1||p.z<-1)return;if(Math.abs(p.x)>1||Math.abs(p.y)>1)return;list.push({o:s,x:(p.x+1)/2*FRAME.w,y:(1-p.y)/2*FRAME.h,px:s.size/d*fpx,dist:d});});return list;}
+function pickSubject(list){const ph=list.filter(s=>s.o.kind==='phen');if(ph.length)return ph.sort((a,b)=>b.px-a.px)[0];const m=list.filter(s=>!['post','fence'].includes(s.o.kind));if(m.length)return m.sort((a,b)=>b.px-a.px)[0];return null;}
+function currentLight(){let l=dayState(G.time/60).light;if(SES&&SES.fog)l*=0.85;if(LOCS[G.loc].interior)l=0.3;return l;}
+function envNow(){return{light:currentLight(),iso:G.roll?G.roll.iso:100,tripod:CAM.tripod&&CAM.tripodT>=1};}
+function computeScores(sub,env){const focal=focalNow();const light=Math.max(env.light,sub?sub.o.emission||0:0);const shutter=env.tripod?clamp(100/(light*env.iso),1,4):1;const err=Math.log2(light*env.iso*shutter/100);const expFac=err<0?1-clamp(-err/3,0,1):1-clamp(err/5,0,1);
+  if(!sub)return{clarity:Math.round(70*expFac),framing:30,rarity:3,story:10,evidence:0,detail:{err,shutter}};
+  const Fd=12*Math.pow(focal/50,2);const ferr=Math.abs(1/CAM.focus-1/sub.dist)*Fd;const focusFac=1-clamp(ferr*1.4,0,1);const blur=sub.o.speed*shutter*(env.tripod?0.2:1)*Math.sqrt(focal/50)*(G.loc==='boat'?1.6:1);const blurFac=1-clamp(blur,0,1);
+  const f=sub.px/FRAME.w;const res=clamp(0.3+f/0.03*0.7,0.3,1);const clarity=100*focusFac*blurFac*expFac*res*(G.lensDirty?0.86:1);
+  const size=f<0.1?f/0.1:f<=0.5?1:Math.max(0.3,1-(f-0.5));const w=FRAME.w,h=FRAME.h;const thirds=[[w/3,h/3],[2*w/3,h/3],[w/3,2*h/3],[2*w/3,2*h/3]].reduce((m,p)=>Math.min(m,Math.hypot(sub.x-p[0],sub.y-p[1])),1e9)/w;const framing=100*(0.55*size+0.45*(1-clamp(thirds/0.25,0,1)));
+  const isPhen=sub.o.kind==='phen';const cat=isPhen?sub.o.category:'mundane';let rarity;if(isPhen){const first=!G.clearCaptured[cat];rarity=clamp(CATS[cat].rarity*(first?1.75:1)*Math.pow(0.85,G.published[cat]||0),0,100);}else rarity=sub.o.rarity;
+  let story=isPhen?20:10;if(env.landmark)story+=isPhen?40:30;if(env.fence)story+=isPhen?30:20;if(isPhen&&SES&&SES.lastPhen===sub.o.phen&&SES.t-SES.lastShotAt<10)story+=20;story=Math.min(100,story);
+  return{clarity:Math.round(clarity),framing:Math.round(framing),rarity:Math.round(rarity),story,evidence:Math.round(clarity*rarity/100),detail:{err,shutter,ferr,blur,res,f}};}
+function render(){if(!SC)return;if(SC.scene.sky)SC.scene.sky.position.copy(CAM.main.position);R.setScissorTest(false);R.setViewport(0,0,W,H);if(CAM.raised){R.setClearColor(0x000000);R.clear();R.setViewport(FRAME.x,H-FRAME.y-FRAME.h,FRAME.w,FRAME.h);R.setScissor(FRAME.x,H-FRAME.y-FRAME.h,FRAME.w,FRAME.h);R.setScissorTest(true);R.render(SC.scene,CAM.photo);R.setScissorTest(false);}else R.render(SC.scene,CAM.main);}
+function takeShot(){const roll=G.roll;if(!roll||roll.shots.length>=roll.exp){SFX.empty();cue(roll?'Out of film. Rewind it from the bag, or load another roll.':'No film in the camera.');return;}
+  if(SES)SES.shots++;const n=roll.shots.length+1;
+  if(SES&&SES.zone==='lighthouse'&&G.day===1&&!SES.ufoGuaranteed&&n>=3&&n<=8&&!roll.shots.some(s=>s.subject.phen==='sky_object_v1')){if(PL.pitch>-0.08&&(n>=6||Math.random()<0.5)){spawnPhen(PHENOMENA.sky_object_v1,true);SES.ufoGuaranteed=true;}}
+  const list=projectAll();const sub=pickSubject(list);const env=envNow();env.landmark=list.some(s=>s.o.landmark);env.fence=list.some(s=>s.o.fence);const sc=computeScores(sub,env);
+  const propVis=SC.prop.visible;SC.prop.visible=false;CAM.photo.layers.enable(1);render();CAM.photo.layers.disable(1);SC.prop.visible=propVis;const oc=document.createElement('canvas');oc.width=540;oc.height=360;oc.getContext('2d').drawImage(gl,FRAME.x,FRAME.y,FRAME.w,FRAME.h,0,0,540,360);
+  const anom=sub&&sub.o.kind==='phen'?{x:sub.x,y:sub.y,r:Math.max(16,sub.px*0.8)}:null;
+  const shot={id:'S'+Date.now().toString(36)+n,day:G.day,slot:G.slot,zone:G.loc,focal:focalNow(),iso:env.iso,tripod:env.tripod,subject:{kind:sub?sub.o.kind:'none',label:sub?sub.o.label:'Landscape',phen:sub&&sub.o.phen||null,category:sub?(sub.o.kind==='phen'?sub.o.category:'mundane'):'mundane'},scores:sc,raw:oc.toDataURL('image/jpeg',0.84),anom,light:env.light};
+  roll.shots.push(shot);if(SES){if(sub&&sub.o.kind==='phen')SES.lastPhen=sub.o.phen;SES.lastShotAt=SES.t;}SFX.shutter();SFX.advance();CAM.flash=0.12;hud();
+  if(G.tut.stage>=3&&G.tut.stage<5){G.tut.stage=5;G.tut.raise=true;}
+  if(roll.shots.length>=roll.exp)setTimeout(()=>cue('That was the last exposure. Rewind the roll from the bag.'),400);refreshQuests();}
+/* --- overlay (2D) --- */
+function drawOverlay(){ctx.clearRect(0,0,W,H);if(!SC||!(MODE==='world'||MODE==='dlg'))return;
+  if(!CAM.raised){const vg=ctx.createRadialGradient(480,300,260,480,300,640);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.5)');ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);ctx.fillStyle='rgba(255,255,255,.55)';ctx.fillRect(479,299,3,3);
+    if(CAM.tripod){ctx.font='600 12px IBM Plex Mono';ctx.fillStyle='#e9b85f';ctx.fillText(CAM.tripodT<1?'SETTING UP TRIPOD…':'TRIPOD SET — T to pick up',16,H-64);}return;}
+  const F_=FRAME;ctx.fillStyle='#000';ctx.fillRect(0,0,W,F_.y);ctx.fillRect(0,F_.y+F_.h,W,H-F_.y-F_.h);ctx.fillRect(0,F_.y,F_.x,F_.h);ctx.fillRect(F_.x+F_.w,F_.y,W-F_.x-F_.w,F_.h);
+  ctx.save();ctx.translate(F_.x,F_.y);if(CAM.flash>0){ctx.fillStyle=`rgba(0,0,0,${Math.min(1,CAM.flash*8)})`;ctx.fillRect(0,0,F_.w,F_.h);}
+  ctx.strokeStyle='rgba(255,255,255,.22)';ctx.lineWidth=1;ctx.setLineDash([2,6]);ctx.beginPath();ctx.moveTo(F_.w/3,0);ctx.lineTo(F_.w/3,F_.h);ctx.moveTo(2*F_.w/3,0);ctx.lineTo(2*F_.w/3,F_.h);ctx.moveTo(0,F_.h/3);ctx.lineTo(F_.w,F_.h/3);ctx.moveTo(0,2*F_.h/3);ctx.lineTo(F_.w,2*F_.h/3);ctx.stroke();ctx.setLineDash([]);
+  const cx=F_.w/2,cy=F_.h/2;ctx.strokeStyle=CAM.lock?'#8fe08a':'rgba(255,255,255,.85)';ctx.lineWidth=1.6;const bw=CAM.lock?24:30,bh=CAM.lock?16:20,L=8;[[cx-bw,cy-bh,1,1],[cx+bw,cy-bh,-1,1],[cx-bw,cy+bh,1,-1],[cx+bw,cy+bh,-1,-1]].forEach(([x,y,dx,dy])=>{ctx.beginPath();ctx.moveTo(x,y+dy*L);ctx.lineTo(x,y);ctx.lineTo(x+dx*L,y);ctx.stroke();});if(CAM.lock){ctx.fillStyle='#8fe08a';ctx.fillRect(cx-1,cy-1,2,2);}
+  ctx.font='600 13px IBM Plex Mono';ctx.fillStyle='#e9b85f';ctx.fillText(`${focalNow()}mm`,14,22);ctx.fillStyle='#e4dfd2';ctx.fillText(G.roll?`ISO ${G.roll.iso}`:'NO FILM',82,22);ctx.textAlign='right';ctx.fillText(G.roll?`EXP ${Math.min(G.roll.shots.length+1,G.roll.exp)}/${G.roll.exp}`:'—',F_.w-14,22);ctx.textAlign='left';
+  const env=envNow();const shutter=env.tripod?clamp(100/(env.light*env.iso),1,4):1;const ev=Math.log2(env.light*env.iso*shutter/100);const st=ev<-1.2?['DARK','#c9503f']:ev<-0.6?['DIM','#e0a458']:ev>1.5?['BRIGHT','#e0a458']:['LIGHT OK','#8fe08a'];
+  ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(F_.w-114,F_.h-34,100,22);ctx.fillStyle=st[1];ctx.font='600 11px IBM Plex Mono';ctx.textAlign='center';ctx.fillText(st[0],F_.w-64,F_.h-19);ctx.textAlign='left';
+  if(G.lensDirty){const hz=ctx.createRadialGradient(F_.w/2,F_.h/2,100,F_.w/2,F_.h/2,520);hz.addColorStop(0,'rgba(230,226,210,.04)');hz.addColorStop(1,'rgba(230,226,210,.22)');ctx.fillStyle=hz;ctx.fillRect(0,0,F_.w,F_.h);ctx.font='600 11px IBM Plex Mono';ctx.fillStyle='#e0a458';ctx.fillText('LENS HAZE',F_.w-96,22+22);}
+  ctx.fillStyle=CAM.lock?'#8fe08a':'#bbb';ctx.fillText(CAM.lock?'FOCUS':'FOCUSING…',14,F_.h-19);if(CAM.tripod)ctx.fillText(CAM.tripodT<1?'TRIPOD…':'TRIPOD · LONG EXP',110,F_.h-19);
+  ctx.restore();ctx.strokeStyle='#e4dfd2';ctx.lineWidth=2;const C=18;[[F_.x,F_.y,1,1],[F_.x+F_.w,F_.y,-1,1],[F_.x,F_.y+F_.h,1,-1],[F_.x+F_.w,F_.y+F_.h,-1,-1]].forEach(([x,y,dx,dy])=>{ctx.beginPath();ctx.moveTo(x,y+dy*C);ctx.lineTo(x,y);ctx.lineTo(x+dx*C,y);ctx.stroke();});
+  ctx.font='11px IBM Plex Mono';ctx.fillStyle='#57615a';ctx.fillText(`${LOCS[G.loc].name.toUpperCase()} · ${fmtTime()}`,F_.x,F_.y+F_.h+18);}
+function nearestHot(){const f=fwd(PL.yaw);let best=null,bd=1e9;SC.hot.forEach(h=>{const dx=h.x-PL.x,dz=h.z-PL.z,d=Math.hypot(dx,dz);if(d>h.r)return;const dot=(dx*f.x+dz*f.z)/(d||1);if(d>1.2&&dot<0.35)return;if(d<bd){bd=d;best=h;}});return best;}
+function worldPrompt(){const st=G.tut.stage;let p='';const roll=G.roll;const left=roll?roll.exp-roll.shots.length:0;
+  if(SES&&st===1)p='<kbd>C</kbd> or <kbd>right click</kbd> raise the camera';else if(SES&&st===2)p='Aim with the <kbd>mouse</kbd>. The bracket goes green when the focus settles.';else if(SES&&st===3)p='Find a gull. Wait for the green bracket, then <kbd>left click</kbd> to shoot.';
+  else if(SES&&st===5)p=`Try the boat and the tower. <kbd>C</kbd> lowers the camera · <kbd>M</kbd> chart · ${left} exp left`;
+  else if(CAM.raised)p=`<kbd>left click</kbd> shoot · <kbd>wheel</kbd> zoom${has('tripod')&&G.loc!=='boat'?' · <kbd>T</kbd> tripod':''} · <kbd>C</kbd> lower`;
+  else{const h=nearestHot();if(h)p=`<kbd>E</kbd> ${typeof h.label==='function'?h.label():h.label}`;else p=SES?`<kbd>C</kbd> raise camera · <kbd>Space</kbd> wait${has('tripod')&&G.loc!=='boat'?' · <kbd>T</kbd> tripod':''} · <kbd>M</kbd> chart`:(G.day===0&&G.loc==='harbor'?'Walk up the quay. <kbd>WASD</kbd> · <kbd>M</kbd> chart':'<kbd>M</kbd> chart · <kbd>I</kbd> bag · <kbd>J</kbd> journal');}
+  prompt(p);}
+function debugText(){if(!SC)return;const list=projectAll();const sub=pickSubject(list);const env=envNow();env.landmark=list.some(s=>s.o.landmark);env.fence=list.some(s=>s.o.fence);const sc=computeScores(sub,env);const d=sc.detail;
+  $('#debug').textContent=`${fmtTime()} pos ${PL.x.toFixed(1)},${PL.z.toFixed(1)} yaw ${PL.yaw.toFixed(2)} pitch ${PL.pitch.toFixed(2)} focal ${focalNow()} focus ${CAM.focus.toFixed(1)} tgt ${(CAM.target||0).toFixed(1)}\nlight ${env.light.toFixed(2)} iso ${env.iso} tripod ${env.tripod} shutter ${d.shutter.toFixed(1)} expErr ${d.err.toFixed(2)}\nsubject ${sub?sub.o.label+' @'+sub.dist.toFixed(0)+'m '+sub.px.toFixed(1)+'px':'none'} ferr ${(d.ferr||0).toFixed(3)} blur ${(d.blur||0).toFixed(2)} res ${(d.res||0).toFixed(2)}\nclarity ${sc.clarity} framing ${sc.framing} rarity ${sc.rarity} story ${sc.story}\n${SES?'active '+SES.active.map(a=>a.ph.id+' '+(a.t0+a.dur-SES.t).toFixed(1)+'s').join(', ')+' timers '+Object.entries(SES.timers).map(([k,v])=>k+':'+(v===null?'still':v.toFixed(0))).join(' ')+' still '+SES.stillT.toFixed(1):'no session'}\nattention ${G.attention} $${G.money} draws ${R.info.render.calls}`;}
+</script>
+<script>
+/* ---------------- ui helpers ---------------- */
+function toast(t,ms=4500){const d=document.createElement('div');d.textContent=t;$('#toast').appendChild(d);setTimeout(()=>d.remove(),ms);}
+function cue(t,ms=3400){const c=$('#cue');c.textContent=t;c.style.opacity=1;clearTimeout(c._t);c._t=setTimeout(()=>c.style.opacity=0,ms);}
+function prompt(html){$('#prompt').innerHTML=html||'';}
+function hud(){if(!G)return;const att=G.attentionVisible?`<div class="att">ATTENTION <i><s style="width:${G.attention}%"></s></i>${G.attention}</div>`:'';const food=`<div class="att food ${G.food<30?'low':''}">FOOD <i><s style="width:${G.food}%"></s></i>${Math.round(G.food)}</div>`;$('#hud').innerHTML=`<b>Day ${G.day}</b> · <span class="clock">${fmtTime()}</span> · ${G.slot} · ${LOCS[G.loc].name}<br>$${G.money}${food}${att}`;
+  const r=G.roll;$('#kit').innerHTML=`<b>${focalNow()}mm</b> · ${r?`ISO ${r.iso} · ${r.exp-r.shots.length} exp`:'no film'}${has('tripod')?' · tripod':''}${G.exposed.length?` · ${G.exposed.length} roll${G.exposed.length>1?'s':''} to develop`:''}`;}
+function showPanel(id){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));$('#card').classList.remove('on');if(id){$('#'+id).classList.add('on');MODE='panel';}}
+function closePanel(){showPanel(null);$('#inspect').classList.remove('on');$('#card').classList.remove('on');MODE=SC?'world':'title';hud();prompt('');}
+function fade(cb,ms=380){const f=$('#fade');f.classList.add('on');setTimeout(()=>{cb&&cb();setTimeout(()=>f.classList.remove('on'),40);},ms);}
+function cards(list,done){cardsBusy=true;const el=$('#cards'),t=$('#cardTxt');el.classList.add('on');let i=0;const step=()=>{if(i>=list.length){el.classList.remove('on');cardsBusy=false;done&&done();return;}t.classList.remove('on');setTimeout(()=>{t.innerHTML=list[i++];t.classList.add('on');setTimeout(step,2700);},500);};step();}
+
+/* ---------------- days ---------------- */
+function sleep(){fade(()=>{endDay(false);},700);}
+function collapse(){fade(()=>{endDay(true);},900);}
+function endDay(late){G.day++;const hungry=G.food<20;G.time=late?10*60+30:hungry?7*60+30:6*60+30;G.lensDirty=true;G.food=clamp(G.food-10,0,100);G.slot=bandOf(G.time/60);G.flags.collapsing=false;G.flags.tailEscapedToday=false;if(!G.publishedToday&&G.paper.issues.length)G.attention=Math.max(0,G.attention-4);G.publishedToday=false;
+  G.rumors=G.rumors.filter(r=>{if(G.day>r.given+r.expiry){toast(`The lead about the ${LOCS[r.zone].name.toLowerCase()} has gone cold.`);return false;}return true;});
+  const dream=pick(['You dream of the tide counting. It gets to nine and starts again.','You dream the lighthouse beam is a hand, and it is feeling for something in the water.','You dream of a print drying on the line. In it, someone is developing a print of you.','No dream. Only the second voice under the first, all night, patient.']);
+  enterLoc('home');setTimeout(()=>{if(late)say([{who:'',text:'You wake on the kitchen floor with the door open and the fog in the house. Half the morning is gone and you do not remember lying down.'}]);else if(hungry)say([{who:'',text:'You slept badly and late, and dreamt of bread. The cupboard is by the door.'}]);else{cue(dream,5000);if(G.day===1){SFX.foghorn();setTimeout(()=>cue('A foghorn, twice. The second one is not the ferry.',4000),5200);}}worldTick();refreshQuests();saveGame();},600);}
+function worldTick(){if(G.paper.queue.length)publishIssue();checkTiers();}
+function activateRumors(){RUMORS.forEach(r=>{if(G.rumorLog[r.id])return;let ok=r.id==='lighthouse_morning'?!!G.flags.diner_day1:G.paper.issues.length>=1;if(!ok)return;G.rumorLog[r.id]='active';G.rumors.push({id:r.id,zone:r.zone,slots:r.slots,hint:r.hint,source:r.source,text:r.text,given:G.day,expiry:r.expiry,confidence:r.confidence});if(r.id!=='lighthouse_morning')toast(`${r.source}: "${r.text}"`,7000);});refreshQuests();}
+function resolveRumor(phenId){G.rumors=G.rumors.filter(r=>{if(r.hint===phenId){G.rumorLog[r.id]='resolved';toast(`${r.source} was right.`);return false;}return true;});}
+function checkTiers(){if(G.attention>=20&&!G.flags.tier1){G.flags.tier1=true;setTimeout(()=>{toast('A plain sedan is parked across from your house. A man photographs it, then drives off.',8000);refreshQuests();},1500);}}
+
+/* ---------------- quests / journal ---------------- */
+function refreshQuests(){if(!G)return;let changed=[];QUESTS.forEach(q=>{const st=G.quests[q.id]||{state:'hidden',stage:0};let state=st.state,stage=st.stage;if(state==='hidden'&&q.when()){state='active';changed.push('New: '+q.title);}
+    if(state==='active'){let s=0;while(s<q.stages.length&&q.stages[s].d())s++;if(s!==stage){stage=s;if(s<q.stages.length)changed.push(q.title+': '+q.stages[s].t);}if(s>=q.stages.length){state='done';changed.push('Done: '+q.title);}}
+    G.quests[q.id]={state,stage};});if(changed.length){SFX.journal();changed.slice(0,3).forEach(c=>toast('Journal · '+c,6000));}}
+let jTab='active';
+function openJournal(tab){if(tab)jTab=tab;showPanel('journal');$('#jSub').textContent=`Day ${G.day} · ${fmtTime()} · $${G.money}${G.attentionVisible?' · attention '+G.attention:''}`;const tabs=$('#jTabs');tabs.innerHTML='';[['active','Open'],['done','Done'],['people','People'],['editions','Editions']].forEach(([id,l])=>{const b=document.createElement('button');b.textContent=l;b.className=jTab===id?'on':'';b.onclick=()=>openJournal(id);tabs.appendChild(b);});
+  const L=$('#jList');L.innerHTML='';if(jTab==='people'){const ids=Object.keys(G.people);if(!ids.length)L.innerHTML='<p style="color:var(--fog2)">Nobody yet. Talk to people.</p>';ids.forEach(id=>{const N=NPCS[id],P=G.people[id];const d=document.createElement('div');d.className='person';d.innerHTML=`<div class="pic" style="background:#${N.color.toString(16).padStart(6,'0')}">${N.name[0]}</div><div><h4>${N.name}<span>${trustDots(id)} · met day ${P.met}</span></h4><p><b style="color:var(--amber2);font-weight:normal">${N.role}.</b> ${N.desc}</p>${P.notes.length?'<ul>'+P.notes.map(n=>`<li>${n}</li>`).join('')+'</ul>':''}</div>`;L.appendChild(d);});return;}
+  if(jTab==='editions'){if(!G.paper.issues.length)L.innerHTML='<p style="color:var(--fog2)">No editions yet.</p>';G.paper.issues.forEach(iss=>{const lp=G.prints.find(p=>p.id===iss.lead);const d=document.createElement('div');d.className='edition';d.innerHTML=`<img src="${lp?lp.img:''}" alt=""><div><h4>Edition ${iss.n} · ${iss.hl||''}</h4><p>Day ${iss.day} · ${iss.items[0].place===1?'front page':'page '+iss.items[0].place} · ${iss.items.length} photo${iss.items.length>1?'s':''}</p></div>`;d.onclick=()=>{renderPaper(iss,lp);showPanel('paperview');PAPER_AFTER=()=>openJournal('editions');};L.appendChild(d);});return;}
+  const list=QUESTS.filter(q=>(G.quests[q.id]||{}).state===jTab);if(!list.length)L.innerHTML=`<p style="color:var(--fog2)">${jTab==='active'?'Nothing open. Talk to people.':'Nothing finished yet.'}</p>`;
+  list.forEach(q=>{const st=G.quests[q.id];const d=document.createElement('div');d.className='quest'+(st.state==='done'?' done':'');const cur=q.stages[st.stage];d.innerHTML=`<h4>${q.title}<span>${q.type}</span></h4><div class="giver">${q.giver}</div><ol>${q.stages.map((s,i)=>`<li class="${i<st.stage?'done':i===st.stage?'now':''}">${s.t}</li>`).join('')}</ol>${cur&&cur.h?`<div class="hint">${cur.h}</div>`:''}`;L.appendChild(d);});}
+
+/* ---------------- chart & travel ---------------- */
+const ISLAND=[[80,200],[130,120],[260,70],[440,40],[600,50],[760,90],[880,180],[930,330],[900,470],[830,540],[700,575],[520,585],[340,560],[200,500],[110,420],[70,320]];
+function drawChart(){const c=$('#chart').getContext('2d');c.fillStyle='#e6dfcb';c.fillRect(0,0,W,H);c.fillStyle='rgba(120,100,70,.06)';for(let i=0;i<300;i++)c.fillRect(Math.random()*W,Math.random()*H,2,2);
+  c.strokeStyle='rgba(60,50,35,.18)';c.lineWidth=1;for(let x=0;x<W;x+=80){c.beginPath();c.moveTo(x,0);c.lineTo(x,H);c.stroke();}for(let y=0;y<H;y+=80){c.beginPath();c.moveTo(0,y);c.lineTo(W,y);c.stroke();}
+  c.font='11px IBM Plex Mono';c.fillStyle='rgba(60,50,35,.55)';[[40,260,'31'],[60,120,'44'],[200,40,'27'],[700,40,'52'],[900,120,'38'],[940,300,'19'],[930,500,'26'],[760,590,'12'],[400,590,'9'],[150,560,'21'],[30,450,'35']].forEach(([x,y,t])=>c.fillText(t,x,y));
+  c.fillStyle='#d9d1b9';c.beginPath();ISLAND.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.closePath();c.fill();c.strokeStyle='#2d2618';c.lineWidth=2;c.stroke();
+  c.strokeStyle='rgba(45,38,24,.5)';c.lineWidth=1;for(let k=0;k<7;k++){c.beginPath();c.moveTo(85+k*6,215+k*20);c.lineTo(120+k*6,225+k*20);c.stroke();}
+  c.strokeStyle='rgba(45,38,24,.35)';c.setLineDash([3,5]);c.beginPath();c.moveTo(250,540);c.lineTo(760,548);c.stroke();c.setLineDash([]);c.font='10px IBM Plex Mono';c.fillStyle='#7a2b22';c.fillText('RESTRICTED  ·  NO PHOTOGRAPHY',405,568);
+  for(let i=0;i<30;i++){const a=i*2.399,r=12+(i*37%50);c.fillStyle='rgba(45,38,24,.35)';c.beginPath();c.arc(560+Math.cos(a)*r*1.9,100+Math.sin(a)*r*0.9,3,0,7);c.fill();}
+  c.strokeStyle='#4a3f2a';c.lineWidth=2;c.beginPath();c.moveTo(150,270);c.lineTo(330,405);c.lineTo(650,405);c.lineTo(760,440);c.lineTo(840,470);c.moveTo(482,405);c.lineTo(482,318);c.moveTo(500,405);c.lineTo(560,120);c.stroke();
+  c.save();c.translate(860,110);c.strokeStyle='#2d2618';c.lineWidth=1.5;c.beginPath();c.arc(0,0,28,0,7);c.stroke();c.beginPath();c.moveTo(0,-34);c.lineTo(6,0);c.lineTo(0,34);c.lineTo(-6,0);c.closePath();c.fillStyle='#2d2618';c.fill();c.font='900 12px Playfair Display';c.textAlign='center';c.fillText('N',0,-40);c.restore();
+  c.font='900 22px Playfair Display';c.fillStyle='#2d2618';c.fillText('The Island',40,560);c.font='11px IBM Plex Mono';c.fillStyle='#6a6252';c.fillText('Admiralty chart, corrected by hand. Soundings in fathoms.',40,578);
+  c.font='11px Special Elite';c.fillStyle='#4a3f2a';c.fillText('Church',455,180);c.fillText('the base',430,525);}
+function travelMinutes(id){const a=LOCS[G.loc].chart,b=LOCS[id].chart;const d=Math.hypot(a[0]-b[0],a[1]-b[1]);return Math.round(8+d/14);}
+function openMap(){drawChart();showPanel('map');const P=$('#pins');P.innerHTML='';Object.entries(LOCS).forEach(([id,L])=>{if(L.noPin)return;const b=document.createElement('button');b.className='pin'+(id===G.loc?' here':'')+(G.rumors.some(r=>r.zone===id)?' rumor':'');b.style.left=L.chart[0]+'px';b.style.top=L.chart[1]+'px';const mins=travelMinutes(id);b.innerHTML=`<i></i>${L.name}${id===G.loc?'':`<br><span style="font:10px var(--mono);color:#6a6252">${mins} min</span>`}`;b.onclick=()=>travel(id);P.appendChild(b);});
+  const spent=SES&&(SES.shots>0||SES.waited>0);const late=G.time/60>=23;
+  $('#mapSide').innerHTML=`<h3>Day ${G.day} · ${fmtTime()}</h3><div class="t">${G.slot} · at ${LOCS[G.loc].name}</div>${G.rumors.length?'<b>Leads</b><ul>'+G.rumors.map(r=>`<li>${LOCS[r.zone].name} · ${r.slots.join('/')}<br><span style="color:#6a6252">${r.source}: ${r.text}</span></li>`).join('')+'</ul>':'<span style="color:#6a6252">No leads. Talk to people.</span>'}
+    ${late?'<p style="color:#7a2b22;margin:10px 0 0">Late. Past two you will not make it home on your feet.</p>':''}<div class="acts"><button onclick="waitHour()">Wait an hour</button><button class="ghost" onclick="closePanel()">Close chart</button></div>`;}
+function waitHour(){closePanel();if(SES)SES.waited++;addTime(60);toast('An hour passes. The fog does not.');if(SC)enterLoc(G.loc);}
+function travel(id){if(id===G.loc){closePanel();return;}const hadShots=(G.roll&&G.roll.shots.length)||G.exposed.length;closePanel();addTime(travelMinutes(id));
+  if(hadShots&&!G.flags.basementKey){G.flags.basementKey=true;G.inv.key_basement=1;toast('There is a key on the kitchen table now. You do not remember it being there.',7000);}enterLoc(id);}
+
+/* ---------------- dialogue ---------------- */
+const NPCS={
+  sigrun:{name:'Sigrún',role:'runs the diner',desc:'Knows everyone and pretends to like half of them. Keeps the rumor board and a napkin your grandfather drew on. Free coffee once; a dollar after.',look:{h:0.95,apron:true},color:0xa8783f,hat:0x6a4a2a,greet:()=>G.day===0?"You the Halvorsen boy? Huh. Hope you sleep better than he did.":!G.flags.diner_day1?"Coffee's free the first day. After that it's a dollar and you'll say it's worth it.":G.paper.issues.length?(G.attention>=17?"Everyone's read it. Two men I've never seen ordered eggs and didn't eat them.":"Saw your picture. Aksel says he's seen worse from a dinghy. He's lying."):"Nothing on the board but a lost dog and the ferry times. Coffee?",
+    topics:[{id:'photos',label:'A place to take pictures?',when:()=>G.day>=1&&!G.flags.diner_day1,lines:["So. Halvorsen's grandson. He used to sit right there and not talk to anybody. You going to be like that?","Hm. Lighthouse is a nice spot for photos, if you're into that. Go before the fog lifts. It lifts against the wind here. Nobody talks about that either."],fx:()=>{G.flags.diner_day1=true;activateRumors();toast('A note on your chart: Lighthouse · Morning.',6000);}},
+      {id:'gf',label:'My grandfather',when:()=>G.day>=1,trust:1,lines:["He stopped coming in the last winter. Said the coffee tasted of the tide. Said it like it was my fault.","He'd sit by the window and draw the same corner over and over on the napkins. I kept one. Don't ask me why."]},
+      {id:'fog',label:'The fog',when:()=>G.day>=1,keep:true,lines:["It comes in on the wrong wind. Ask Aksel, he keeps count. Ask him twice and he'll tell you the number."]},
+      {id:'paper',label:'About the paper',when:()=>G.paper.issues.length>0,keep:true,lines:["Halldór's brave in print and careful everywhere else. If he gives you a front page, he's decided you're worth the trouble that comes after."]}]},
+  aksel:{name:'Aksel',role:'fisherman, harbor master',desc:'Tall, slow to speak, counts the fog on his wheelhouse door. Knew your grandfather and does not say so lightly. Will take you out on the water once he trusts you.',look:{h:1.12,w:1.08,rope:true},color:0x4f6f88,hat:0x1f2a33,greet:()=>G.day===0?"Ferry's late. Always is when the fog's like this.":G.loc==='boat'?"Don't lean on the rail. She rolls.":G.paper.issues.length?"Calm night tonight, if you're asking. I'm not saying anything else.":"Fish are fine. Weather's fine. You want a rumor, buy a coffee.",
+    topics:[{id:'lights',label:'Seen anything on the water?',when:()=>G.paper.issues.length>0&&!G.flags.akselHook,lines:["Lights under the water by the north quay. Night, when the sea goes flat. I've seen them from the boat twice and I don't drink.","Your grandfather used to ask about that. Same look on his face you've got now. Had a notebook. Drew angles in it. Angles, in a boat."],fx:()=>{G.flags.akselHook=true;}},
+      {id:'boat',label:'Take me out on the water',when:()=>G.loc==='harbor'&&(G.trust.aksel||0)>=2,keep:true,lines:[],fx:()=>{if(G.slot!=='Evening'&&G.slot!=='Night'){say([{who:'Aksel',text:"Not in daylight. They see the boat from the ridge in daylight. Come at dusk."}]);return;}dlgEnd();say([{who:'Aksel',text:"Get in. Don't drop anything over the side, it won't come back the same."}],()=>{addTime(50);enterLoc('boat');});}},
+      {id:'fog',label:'The fog',when:()=>true,keep:true,lines:["Forty-one days this year it came in against the wind. I keep the count on the wheelhouse door. Nobody else counts, so nobody else worries."]},
+      {id:'base',label:'The base',when:()=>G.day>=1,trust:1,lines:["They dredge at night. Nobody dredges at night. Whatever they bring up, they bring up covered."]},
+      {id:'sea',label:'The sea',when:()=>G.day>=1,trust:2,lines:["Some nights it goes flat like a held breath. The gulls know first. Then the engine sounds wrong, like it's underwater and you're not.","He said there was a second voice under the first. I told him that was the pump. I don't think it was the pump."]},
+      {id:'gift',label:'Give him a print of his boat',when:()=>G.prints.some(p=>p.subject.label==="Aksel's boat"&&!p.sold&&p.tag!=='discard'&&!p.given),lines:["Huh. She looks better than she is. Thank you."],fx:()=>{const p=G.prints.find(p=>p.subject.label==="Aksel's boat"&&!p.sold&&!p.given);p.given=true;p.tag='discard';G.trust.aksel=Math.min(5,(G.trust.aksel||0)+1);toast('Aksel trusts you a little more.');refreshQuests();}}]},
+  tobias:{name:'Tobias',role:'twelve, sneaks near the base',desc:'Small, fast, always somewhere he should not be. His father works at the base and says things at dinner. Do not put his name in the paper.',look:{h:0.72,w:0.8,cap:true,bag:true},hat:0x2a4a2a,color:0x8aa35a,greet:()=>G.day===0?"…":G.loc==='woods'?"Shh. You have to stand really still. Don't tell my mum I'm here.":G.paper.issues.length?"You're the camera guy from the paper.":"You're the camera guy. My dad says the base has a runway that isn't on the map.",
+    topics:[{id:'woods',label:'Seen anything strange?',when:()=>G.paper.issues.length>0&&G.day>=1,lines:["There's something in the woods near the fence. It only comes when you stand really still. I stood still for like an hour. Don't tell my mum.","It's tall. It doesn't have a face where a face goes."]},
+      {id:'gate',label:'The fence',when:()=>G.day>=1,trust:1,lines:["There's a gate on the far side that opens outward. Fences keep things in, not out. My dad says I'm not allowed to say that."]},
+      {id:'run',label:'…',when:()=>G.day===0,lines:['The kid stares at you, then runs.'],fx:()=>{const g=SC.npcs.tobias;if(g)g.visible=false;SC.hot=SC.hot.filter(h=>h.label!=='Talk to Tobias');}}]},
+  marit:{name:'Marit',role:'camera shop, repairs',desc:'Brisk, glasses, sold your grandfather every roll he ever shot. Buys and sells gear, and quietly buys prints for the postcard rack, which the paper never hears about.',look:{glasses:true},color:0x8a5a80,hat:0x3a2a3a,greet:()=>!G.flags.metMarit?"Haven't seen one of those since… well. Rangefinder still meters?":G.paper.issues.length?"Saw your picture. He would have printed it bigger. Shelves are behind me.":"Film's on the shelf. Reach and stillness cost extra.",
+    topics:[{id:'shop',label:'See what you have',when:()=>true,keep:true,lines:[],fx:()=>openShop('buy')},{id:'sellto',label:'I have something to sell',when:()=>true,keep:true,lines:[],fx:()=>openShop('sell')},
+      {id:'camera',label:'This camera',when:()=>!G.flags.metMarit,lines:["Fixed fifty, twelve frames. Fine for gulls. If you want the far things you need reach; if you want the dark things you need to stand still and let the light in. Can't afford both yet, I'd guess. Have a look at the shelves."],fx:()=>{G.flags.metMarit=true;}},
+      {id:'clock',label:'Anything I should know?',when:()=>G.paper.issues.length>0&&!G.flags.maritClock,lines:["Since you're the type: the church clock runs backwards for a minute at three in the morning. Don't ask me how I know.","Not something you can shoot yet. Ask me some other time, and don't print the angles. He printed the angles."],fx:()=>{G.flags.maritClock=true;}},
+      {id:'enl',label:'The enlarger',when:()=>!has('enlarger'),keep:true,lines:["His. I took it in against a bill he never paid. Eighty and it goes back down his stairs, and you can crop the sky out of your mistakes."]},
+      {id:'gf',label:'My grandfather',when:()=>G.day>=1,trust:2,lines:["He bought two rolls a week from me for thirty years and never sold me a single print. The last winter he bought six a week.","He asked me once whether film could show a thing that wasn't there yet. I said no. I was guessing."]}]},
+  halldor:{name:'Halldór',role:'editor of the Courier',desc:'Two rooms, one press, a cane he does not need yet. Brave in print, careful everywhere else. Page six is filler, page three is news, the front page is a decision.',look:{paper:true,cane:true},color:0x5a5f68,hat:0x2a2d31,greet:()=>!G.flags.metEditor?"We don't buy from strangers. Sit down anyway.":G.paper.mood>1.05?"The last one sold. Don't let it go to your head.":"The Courier prints when I say so and the press agrees. What have you got?",
+    topics:[{id:'sell',label:'I have prints.',when:()=>true,keep:true,lines:[],fx:()=>openCourier()},
+      {id:'paper',label:'About the paper',when:()=>true,keep:true,lines:["Two rooms, one press, weekly when the press cooperates. Page six is filler. Page three is news. The front page is a decision."]},
+      {id:'base',label:'The base',when:()=>G.day>=1,trust:1,lines:["We had an arrangement. I print the ferry times and the tide tables, and they don't visit. Your pictures are going to cost me that arrangement. I find I don't mind."]},
+      {id:'gf',label:'My grandfather',when:()=>G.paper.issues.length>0,trust:1,lines:["He brought me a print once. Nineteen eighty-something. I didn't run it. I've thought about that print more than anything I did run."]}]},
+  man:{name:'The Man',role:'unknown',desc:'A plain sedan, a good coat, a way of saying "fine morning" at any hour. Polite. Takes undeveloped film as if it were his.',look:{h:1.05},color:0x121417,hat:0x0a0c0e,greet:()=>"Fine morning.",topics:[{id:'who',label:'Who are you?',when:()=>true,keep:true,lines:["He looks at your camera, then at the water, then at your camera again. 'Fine morning,' he says again. It is not morning."]}]}};
+let DLG=null;
+function trustDots(id){const t=G.trust[id]||0;return 'trust '+'●'.repeat(t)+'○'.repeat(Math.max(0,5-t));}
+function talk(id){if(DLG)clearInterval(DLG.tw);const N=NPCS[id];if(!G.people[id]){G.people[id]={met:G.day,notes:[]};toast('Journal · People: '+N.name,5000);}if(!G.talkedDay[id]||G.talkedDay[id]<G.day){G.talkedDay[id]=G.day;if(G.day>=1){G.trust[id]=Math.min(5,(G.trust[id]||0)+1);refreshQuests();}}
+  DLG={npc:id,queue:[],fx:null};MODE='dlg';$('#dlg').style.display='block';$('#dlgWho').textContent=N.name;$('#dlgTrust').textContent=trustDots(id);dlgType(N.greet(),()=>dlgTopics());}
+function say(lines,done){if(DLG)clearInterval(DLG.tw);DLG={npc:null,queue:lines.slice(),done};MODE='dlg';$('#dlg').style.display='block';$('#dlgTopics').innerHTML='';dlgQueue();}
+function dlgQueue(){const l=DLG.queue.shift();if(!l){if(DLG.npc){const fx=DLG.fx;DLG.fx=null;if(fx)fx();if(MODE==='dlg'&&DLG)dlgTopics();return;}dlgEnd();return;}
+  const who=typeof l==='string'?NPCS[DLG.npc].name:(l.who||'');$('#dlgWho').textContent=who;$('#dlgTrust').textContent=DLG.npc?trustDots(DLG.npc):'';$('#dlgTopics').innerHTML='';dlgType(typeof l==='string'?l:l.text,null);}
+function dlgType(text,after){const tx=$('#dlgTxt');tx.textContent='';let i=0;clearInterval(DLG.tw);$('#dlgMore').style.display=after?'none':'block';DLG.after=after;DLG.full=text;const D=DLG;
+  D.tw=setInterval(()=>{if(DLG!==D){clearInterval(D.tw);return;}i+=2;tx.textContent=text.slice(0,i);if(i>=text.length){clearInterval(D.tw);D.tw=null;if(after)after();}},13);}
+function dlgTopics(){const N=NPCS[DLG.npc];const box_=$('#dlgTopics');box_.innerHTML='';$('#dlgMore').style.display='none';
+  N.topics.forEach(t=>{if(!t.when())return;const key=DLG.npc+'.'+t.id;if(!t.keep&&G.topicsDone[key])return;const b=document.createElement('button');const need=t.trust&&(G.trust[DLG.npc]||0)<t.trust;b.textContent=t.label+(need?' (trust '+t.trust+')':'');b.disabled=!!need;
+    b.onclick=()=>{if(!t.keep)G.topicsDone[key]=true;addTime(5);if(t.lines.length&&!t.keep)notePerson(DLG.npc,t.label+': '+t.lines[0].slice(0,90)+(t.lines[0].length>90?'…':''));DLG.queue=t.lines.slice();DLG.fx=t.fx||null;if(!DLG.queue.length){const fx=DLG.fx;DLG.fx=null;if(fx)fx();return;}dlgQueue();};box_.appendChild(b);});
+  const bye=document.createElement('button');bye.className='ghost';bye.textContent='Goodbye';bye.onclick=dlgEnd;box_.appendChild(bye);}
+function dlgNext(){if(!DLG)return;if(DLG.tw){clearInterval(DLG.tw);DLG.tw=null;$('#dlgTxt').textContent=DLG.full;if(DLG.after)DLG.after();return;}if(DLG.after)return;dlgQueue();}
+function dlgEnd(){if(!DLG)return;clearInterval(DLG.tw);$('#dlg').style.display='none';const d=DLG.done;DLG=null;if(MODE==='dlg')MODE=panelOpen()?'panel':'world';refreshQuests();saveGame();d&&d();}
+
+/* ---------------- 3D item viewer, bag, shop card ---------------- */
+const IV={r:null,scene:null,cam:null,model:null,canvas:$('#itemcv')};
+function ivInit(){if(IV.r)return;IV.r=new T.WebGLRenderer({canvas:IV.canvas,alpha:true,antialias:true});IV.r.setSize(318,240,false);IV.scene=new T.Scene();IV.cam=new T.PerspectiveCamera(32,318/240,0.1,50);IV.cam.position.set(0,0.9,3.4);IV.cam.lookAt(0,0,0);const h=new T.HemisphereLight(0xc9d6cf,0x22302e,1.1);IV.scene.add(h);const d=new T.DirectionalLight(0xf2efe0,0.9);d.position.set(2,3,2);IV.scene.add(d);}
+function ivShow(id,host){ivInit();if(IV.model)IV.scene.remove(IV.model);IV.model=itemModel(id);IV.scene.add(IV.model);IV.canvas.style.display='block';host.prepend(IV.canvas);}
+function ivTick(dt){if(!IV.r||!IV.model||IV.canvas.style.display==='none'||!IV.canvas.isConnected)return;IV.model.rotation.y+=dt*0.7;IV.model.position.y=Math.sin(performance.now()/900)*0.05;IV.r.render(IV.scene,IV.cam);}
+let invSel=null;
+function openInventory(sel){showPanel('inventory');$('#invSub').textContent=`$${G.money} · Day ${G.day}, ${fmtTime()}`;const grid=$('#invGrid');grid.innerHTML='';const r=G.roll;
+  const entries=[['body','camera']];if(r)entries.push(['__roll','loaded']);Object.entries(G.inv).forEach(([id,n])=>{if(n&&id!=='body')entries.push([id,ITEMS[id].kind]);});G.exposed.forEach((x,i)=>entries.push(['__exp'+i,'exposed']));
+  if(!sel||!entries.some(e=>e[0]===sel))sel=entries[0][0];invSel=sel;
+  entries.forEach(([id,kind])=>{const d=document.createElement('div');d.className='slot'+(id===sel?' on':'');let name,sub;if(id==='__roll'){name=`Loaded: ISO ${r.iso}`;sub=`${r.exp-r.shots.length} of ${r.exp} frames left`;}else if(id.startsWith('__exp')){const x=G.exposed[+id.slice(5)];name=`Exposed roll · ISO ${x.iso}`;sub=`${x.shots.length} frames, undeveloped`;}else{name=ITEMS[id].name+(G.inv[id]>1?' × '+G.inv[id]:'');sub=kind==='lens'?(G.equip.lens===id?'mounted':'in the bag'):kind;}
+    d.innerHTML=`<div class="tag">${kind}</div><h4>${name}</h4><p>${sub}</p>`;d.onclick=()=>openInventory(id);grid.appendChild(d);});
+  const turn=$('#invTurn');turn.innerHTML='';let modelId=sel==='__roll'?(r.item||'film100'):sel.startsWith('__exp')?'film100':sel;ivShow(modelId,turn);const info=document.createElement('div');info.className='info';
+  if(sel==='__roll'){info.innerHTML=`<h3>Film in the camera</h3>ISO ${r.iso} · ${r.exp-r.shots.length} of ${r.exp} frames left${r.shots.length?`<div style="margin-top:10px"><button class="small" onclick="rewindRoll()">Rewind${r.shots.length<r.exp?' (lose '+(r.exp-r.shots.length)+' frames)':''}</button></div>`:''}`;}
+  else if(sel.startsWith('__exp')){info.innerHTML=`<h3>Exposed roll</h3>Waiting for the tank. Develop it in the basement at home.`;}
+  else{const it=ITEMS[sel];let act='';if(it.kind==='lens')act=G.equip.lens===sel?'<b>mounted</b>':`<button class="small" onclick="equipLens('${sel}')">Mount</button>`;if(it.kind==='film')act=`<button class="small" ${(r&&r.shots.length)?'disabled':''} onclick="loadFilm('${sel}')">${r?'Swap in':'Load'}</button>${r&&r.shots.length?' <span style="font-size:11px">rewind the loaded roll first</span>':''}`;if(it.kind==='note')act=`<button class="small" onclick="readLetter()">Read</button>`;if(it.kind==='sample')act='<b>for the notebook</b>';if(it.kind==='food')act=`<button class="small" onclick="eatItem('${sel}')">Eat</button>`;if(sel==='watch')act=`<button class="small" onclick="openWatch()">Open (N)</button>`;if(sel==='cloth')act=G.lensDirty?`<button class="small" onclick="wipeLens(()=>openInventory('cloth'))">Wipe the lens</button>`:'<b>lens is clean</b>';if(sel==='tripod')act='<b>T in the field</b>';if(sel==='enlarger')act='<b>installed in the basement</b>';
+    info.innerHTML=`<h3>${it.name}</h3>${it.desc}${it.enables?`<br><b>Enables:</b> ${it.enables}`:''}<div style="margin-top:10px">${act}</div>`;}turn.appendChild(info);}
+function equipLens(id){G.equip.lens=id;if(id==='lens135')G.equip.focal=135;SFX.click();openInventory(id);hud();}
+function loadFilm(id){const it=ITEMS[id];if(G.roll&&G.roll.shots.length)return;if(G.roll){G.inv[G.roll.item]=(G.inv[G.roll.item]||0)+1;}G.inv[id]--;G.roll={iso:it.iso,exp:it.exp,shots:[],item:id};SFX.advance();toast(`Loaded ISO ${it.iso}.`);openInventory('__roll');hud();}
+function rewindRoll(){if(!G.roll||!G.roll.shots.length)return;G.exposed.push({iso:G.roll.iso,shots:G.roll.shots});G.roll=null;SFX.advance();toast('Roll rewound. Develop it in the basement.');openInventory();hud();refreshQuests();}
+function readLetter(){SFX.page();G.flags.readLetter=true;const turn=$('#invTurn');const old=turn.querySelector('.note');if(old)old.remove();const d=document.createElement('div');d.className='note';d.style.margin='0';d.innerHTML=`<div style="font:11px var(--mono);letter-spacing:.12em;color:#6a6252;margin-bottom:6px">IN HIS HAND · WATER-DAMAGED</div>${LETTER}`;turn.appendChild(d);refreshQuests();}
+function openCard(id,shop){const it=ITEMS[id];const c=$('#card');c.classList.add('on');MODE='panel';const owned=it.kind!=='film'&&has(id);const can=G.money>=it.price;c.innerHTML=`<div class="turn"></div>`;ivShow(id,c.querySelector('.turn'));
+  const info=document.createElement('div');info.className='info';info.innerHTML=`<h3>${it.name}</h3>${it.desc}<br><b>Enables:</b> ${it.enables||'—'}${it.kind==='film'&&has(id)?`<br>You have ${G.inv[id]}.`:''}<div class="acts">${owned?'<b>owned</b>':`<button class="primary" ${can?'':'disabled'} onclick="buy('${id}')">Buy · $${it.price}</button>`}<button class="ghost" onclick="closeCard()">Back</button></div>`;c.querySelector('.turn').appendChild(info);}
+function closeCard(){$('#card').classList.remove('on');MODE=SC?'world':'title';}
+function buy(id){const it=ITEMS[id];if(G.money<it.price)return;G.money-=it.price;G.inv[id]=(G.inv[id]||0)+1;SFX.coin();toast(id==='lens135'?'135mm lens. Mount it from the bag (I).':id==='tripod'?'Tripod. T in the field to set it up.':id==='enlarger'?'Enlarger. Marit will send it down your stairs.':it.kind==='food'?'Tinned fish. Eat it from the bag.':`A roll of ISO ${it.iso}. Load it from the bag (I).`);hud();if(SC&&SC.stands){const s=SC.stands.find(s=>s.id===id);if(s&&it.kind!=='film')s.m.visible=false;}if($('#shop').classList.contains('on'))renderShop(shopTab,id);else openCard(id,true);saveGame();}
+
+/* ---------------- notebook ---------------- */
+let nbSel=null;
+function openNotebook(){showPanel('notebook');nbSel=null;refreshQuests();const S=$('#nbSamples');S.innerHTML='<span style="font:12px var(--mono);color:var(--fog2);margin-right:6px">YOU CARRY</span>';const samples=Object.keys(G.inv).filter(id=>G.inv[id]&&ITEMS[id].kind==='sample');
+  if(!samples.length)S.innerHTML+='<span style="color:var(--fog2)">nothing he would have drawn. Things get left behind where they have been.</span>';samples.forEach(id=>{const b=document.createElement('button');b.className='small';b.textContent=ITEMS[id].name;b.onclick=()=>{nbSel=id;[...S.querySelectorAll('button')].forEach(x=>x.classList.toggle('on',x===b));};S.appendChild(b);});
+  const P=$('#nbPages');P.innerHTML='';PAGES.forEach((pg,i)=>{const un=G.pages[pg.id];const d=document.createElement('div');d.className='page'+(un?'':' locked');d.innerHTML=`<div class="n">page ${i+1} · ${pg.title}</div>${pg.sketch}${un?`<div class="u">${pg.unlock}</div>`:''}`;
+    d.onclick=()=>{if(un)return;if(!nbSel){toast('Pick something from the bag first.');return;}if(nbSel===pg.sample){G.pages[pg.id]=true;pg.fx();SFX.journal();G.inv[nbSel]=0;openNotebook();refreshQuests();}else{SFX.empty();say([{who:'',text:'The page does not want it.'}]);}};P.appendChild(d);});}
+
+/* ---------------- darkroom ---------------- */
+let DR=null;
+function loadImg(src){return new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=src;});}
+async function renderPrint(shot,clarity,devResult){const img=await loadImg(shot.raw);const c=document.createElement('canvas');c.width=376;c.height=256;const x=c.getContext('2d');x.fillStyle='#f1ebdd';x.fillRect(0,0,376,256);
+  const blurPx=Math.pow(1-clarity/100,2)*5;const err=shot.scores.detail?shot.scores.detail.err:0;const gain=clamp(1/Math.pow(Math.max(shot.light||1,0.03),0.6),1,5);const bright=clamp(gain*Math.pow(2,0.75*err),0.3,3.6);const contrast=devResult==='over'?1.6:devResult==='under'?0.85:1.28;
+  x.save();x.beginPath();x.rect(8,8,360,240);x.clip();if(FILTER_OK)x.filter=`brightness(${bright.toFixed(2)}) contrast(${contrast}) blur(${blurPx.toFixed(2)}px)`;if(img)x.drawImage(img,8,8,360,240);x.filter='none';
+  x.globalCompositeOperation='saturation';x.fillStyle='#808080';x.fillRect(8,8,360,240);x.globalCompositeOperation='multiply';x.fillStyle='rgba(243,232,210,.92)';x.fillRect(8,8,360,240);x.globalCompositeOperation='source-over';
+  const grain=Math.min(0.14,(shot.iso>=400?0.11:0.06)+(shot.light<0.3?0.04:0));const id=x.getImageData(8,8,360,240),d=id.data;for(let i=0;i<d.length;i+=4){const n=(Math.random()-0.5)*255*grain;d[i]+=n;d[i+1]+=n;d[i+2]+=n;}x.putImageData(id,8,8);x.restore();return c.toDataURL('image/jpeg',0.86);}
+function enterDarkroom(){showPanel('darkroom');DR={step:'choose'};$('#drSub').textContent='safelight on · one tray, one lamp'+(has('enlarger')?' · enlarger':'');setAmbient({clock:0.04,drone:0.02});drRender();}
+function drRender(){const b=$('#drBody');const first=!G.flags.devOnce;
+  if(DR.step==='choose'){const rolls=[];if(G.roll&&G.roll.shots.length)rolls.push({label:`Roll in the camera · ISO ${G.roll.iso} · ${G.roll.shots.length} frames${G.roll.shots.length<G.roll.exp?' (unused frames will be lost)':''}`,src:'camera'});G.exposed.forEach((x,i)=>rolls.push({label:`Exposed roll · ISO ${x.iso} · ${x.shots.length} frames`,src:i}));
+    b.innerHTML=`<div class="tray"><p class="hint">${rolls.length?'Choose a roll for the tank. Thirty minutes each.':'Nothing to develop. Shoot a roll first.'}</p><div class="rolls">${rolls.map(r=>`<button onclick="drChoose('${r.src}')">${r.label}</button>`).join('')}</div>${G.prints.length?'<div style="margin-top:14px"><button class="small ghost" onclick="openPrints()">Print shelf</button></div>':''}</div>`;}
+  else if(DR.step==='develop'){const z=first?[38,92]:[55,80];DR.zone=z;b.innerHTML=`<div class="tray" id="tray"><p class="hint">Hold <b>Space</b> or the <b>mouse button</b> on the tray to agitate. Let go when the bar sits in the green.</p><div class="bar"><div class="zone" style="left:${z[0]}%;width:${z[1]-z[0]}%"></div><div class="fill" id="drFill"></div></div><p class="hint" id="drRes">developer · 20°C</p></div>`;
+    const tr=$('#tray');tr.onmousedown=()=>{if(!DR.result)DR.hold=true;};tr.onmouseup=()=>drRelease();tr.onmouseleave=()=>{if(DR.hold)drRelease();};}
+  else if(DR.step==='prints'){b.innerHTML=`<p class="hint" style="text-align:center;color:#c7958c;font:13px var(--type)">${resultText(DR.result)} Prints come up one at a time. Click any print to look closer.</p><div class="strip" id="drStrip"></div><div style="text-align:center;margin-top:14px"><button id="drDone" class="primary" style="display:none" onclick="drFinish()">Hang them to dry</button></div>`;}}
+function drChoose(src){if(src==='camera'){DR.roll=G.roll;G.roll=null;}else{DR.roll=G.exposed.splice(+src,1)[0];}addTime(30);DR.step='develop';DR.fill=0;DR.hold=false;DR.result=null;SFX.slosh();hud();drRender();}
+function resultText(r){return r==='good'?'Timing was right. Clean negatives.':r==='under'?'Pulled too early. Muddy negatives (sharpness −10).':'Left too long. Contrast blown (sharpness −10).';}
+function drUpdate(dt){if(DR&&DR.step==='develop'&&!DR.result){if(DR.hold||keys.has('Space')){DR.fill=Math.min(100,DR.fill+dt*(18+DR.fill*0.1));if(Math.random()<dt*2)SFX.slosh();if(DR.fill>=100)drRelease();}const f=$('#drFill');if(f)f.style.width=DR.fill+'%';}}
+function drRelease(){if(!DR||DR.result||DR.step!=='develop')return;DR.hold=false;const [a,b]=DR.zone;DR.result=DR.fill<a?'under':DR.fill>b?'over':'good';$('#drRes').textContent=resultText(DR.result);setTimeout(drDevelop,900);}
+async function drDevelop(){DR.step='prints';drRender();const strip=$('#drStrip');const mod=DR.result==='good'?0:-10;G.flags.devOnce=true;
+  for(const shot of DR.roll.shots){const clarity=clamp(shot.scores.clarity+mod,0,100);const img=await renderPrint(shot,clarity,DR.result);
+    const pr={id:'P'+(G.printSeq++),day:shot.day,slot:shot.slot,zone:shot.zone,focal:shot.focal,iso:shot.iso,tripod:shot.tripod,subject:shot.subject,scores:{...shot.scores,clarity},img,anom:shot.anom,discovered:false,tag:'keep',sold:false,dev:DR.result};delete pr.scores.detail;
+    G.prints.push(pr);const el=printEl(pr,true);strip.appendChild(el);await new Promise(r=>setTimeout(r,60));el.classList.add('res');
+    if(pr.anom){setTimeout(()=>{SFX.sting();if(!G.flags.stingHint){G.flags.stingHint=true;setTimeout(()=>cue("Something's in that one. Click it. Look closer.",5000),1200);}},900);}
+    await new Promise(r=>setTimeout(r,pr.anom?2600:1050));}
+  $('#drDone').style.display='inline-block';hud();refreshQuests();saveGame();}
+function printEl(pr,fresh){const d=document.createElement('div');d.className='print'+(pr.discovered?' anom':'')+(fresh?'':' res');d.dataset.id=pr.id;d.innerHTML=`<img src="${pr.img}" alt=""><span class="t ${pr.sold?'sold':pr.tag}">${pr.sold?'sold':pr.tag}</span><div class="n"><span>${pr.id}${pr.cropped?' ✂':''}</span><span>${pr.zone==='lighthouse'?'cliff':pr.zone} · ${pr.slot.slice(0,3).toLowerCase()} d${pr.day}</span></div>`;d.onclick=()=>inspectPrint(pr,d);return d;}
+function drFinish(){$('#inspect').classList.remove('on');closePanel();applyAudio();}
+let INS=null;
+function inspectPrint(pr,el){INS={pr,el,crop:null};const v=$('#inspect');v.classList.add('on');$('#insImg').src=pr.img;const side=$('#insSide');const label_=()=>pr.discovered?PHENOMENA[pr.subject.phen].name:(pr.subject.kind==='phen'?'Nothing obvious':pr.subject.label);
+  side.innerHTML=`<div><b>${pr.id}</b>${LOCS[pr.zone].name} · Day ${pr.day}, ${pr.slot}</div><div>${pr.focal}mm · ISO ${pr.iso}${pr.tripod?' · tripod':''}${pr.cropped?' · cropped':''}</div><div>Subject<b id="insSubj">${label_()}</b></div><div class="unk ${pr.discovered?'on':''}" id="insUnk">◻ ${pr.discovered?PHENOMENA[pr.subject.phen].mark:''}</div>
+    <div style="margin-top:8px">Tag</div><div style="display:flex;flex-direction:column;gap:6px"><button class="small ${pr.tag==='keep'?'primary':''}" onclick="tagPrint('keep')">Keep</button><button class="small ${pr.tag==='sell'?'primary':''}" onclick="tagPrint('sell')">Sell</button><button class="small ${pr.tag==='discard'?'primary':''}" onclick="tagPrint('discard')">Discard</button></div>
+    ${has('enlarger')&&!pr.cropped&&!pr.sold?`<button class="small" style="margin-top:10px" id="insCrop" onclick="startCrop()">Crop (enlarger)</button>`:''}
+    <div style="margin-top:10px;color:#8f5a52" id="insHint">Move the loupe over the print. Anomalies are only marked once you find them.</div><button class="small" style="margin-top:8px" onclick="closeInspect()">Back</button>`;
+  const big=v.querySelector('.big');big.classList.remove('crop');big.onmousemove=e=>{const r=big.getBoundingClientRect();const s=+$('#stage').dataset.s||1;INS.mx=(e.clientX-r.left)/s;INS.my=(e.clientY-r.top)/s;if(INS.crop&&INS.crop.dragging){INS.crop.x1=INS.mx;INS.crop.y1=INS.my;}drawLoupe();};big.onmouseleave=()=>{INS.mx=null;drawLoupe();};
+  big.onmousedown=e=>{if(!INS.crop)return;INS.crop.dragging=true;INS.crop.x0=INS.mx;INS.crop.y0=INS.my;INS.crop.x1=INS.mx;INS.crop.y1=INS.my;};big.onmouseup=e=>{if(!INS.crop||!INS.crop.dragging)return;INS.crop.dragging=false;applyCrop();};drawLoupe();}
+function cropRect(){const c=INS.crop;let w=Math.abs(c.x1-c.x0),h=w/1.5;if(c.y1<c.y0)h=-h;const x=Math.min(c.x0,c.x1),y=c.y1<c.y0?c.y0+h:c.y0;return{x:clamp(x,0,720-Math.max(w,1)),y:clamp(Math.min(y,y+h),0,480-Math.abs(h)),w,h:Math.abs(h)};}
+function drawLoupe(){const c=$('#insCv').getContext('2d');c.clearRect(0,0,720,480);const pr=INS.pr,img=$('#insImg');
+  if(INS.crop){if(INS.crop.dragging||INS.crop.x1!=null){const r=cropRect();c.fillStyle='rgba(0,0,0,.55)';c.fillRect(0,0,720,480);c.clearRect(r.x,r.y,r.w,r.h);c.strokeStyle='#e9b85f';c.lineWidth=1.5;c.strokeRect(r.x,r.y,r.w,r.h);}return;}
+  if(INS.mx!=null&&!pr.discovered&&pr.anom){const d=Math.hypot(INS.mx-pr.anom.x,INS.my-pr.anom.y);if(d<pr.anom.r+34){discover(pr);return;}}
+  if(!img.complete||!img.naturalWidth)return;
+  if(pr.discovered&&pr.anom){const ax=pr.anom.x,ay=pr.anom.y,r=pr.anom.r+10;c.strokeStyle='#e0473a';c.lineWidth=1.5;c.setLineDash([4,3]);c.strokeRect(ax-r,ay-r,r*2,r*2);c.setLineDash([]);c.font='600 10px IBM Plex Mono';c.fillStyle='#e0473a';c.fillText(PHENOMENA[pr.subject.phen].mark,ax-r,ay-r-6);}
+  if(INS.mx==null)return;const Rr=88,z=2.6,mx=INS.mx,my=INS.my;c.save();c.beginPath();c.arc(mx,my,Rr,0,7);c.clip();c.fillStyle='#000';c.fillRect(mx-Rr,my-Rr,Rr*2,Rr*2);const sx=(mx/720)*img.naturalWidth,sy=(my/480)*img.naturalHeight,sw=(Rr*2/z)/720*img.naturalWidth,shh=(Rr*2/z)/480*img.naturalHeight;c.drawImage(img,sx-sw/2,sy-shh/2,sw,shh,mx-Rr,my-Rr,Rr*2,Rr*2);c.restore();c.strokeStyle='rgba(255,255,255,.7)';c.lineWidth=2;c.beginPath();c.arc(mx,my,Rr,0,7);c.stroke();}
+function startCrop(){INS.crop={x0:0,y0:0,x1:null,y1:null,dragging:false};$('#inspect .big').classList.add('crop');$('#insHint').textContent='Drag a rectangle. The enlarger keeps the 3:2 shape. Grain grows with the crop.';$('#insCrop').textContent='Cancel crop';$('#insCrop').onclick=()=>{INS.crop=null;$('#inspect .big').classList.remove('crop');inspectPrint(INS.pr,INS.el);};}
+async function applyCrop(){const r=cropRect();if(r.w<120){toast('Too small a crop. The grain would eat it.');INS.crop.x1=null;drawLoupe();return;}const pr=INS.pr;const img=await loadImg(pr.img);const Z=720/r.w;
+  const c=document.createElement('canvas');c.width=376;c.height=256;const x=c.getContext('2d');x.fillStyle='#f1ebdd';x.fillRect(0,0,376,256);const sx=8+r.x/720*360,sy=8+r.y/480*240,sw=r.w/720*360,sh=r.h/480*240;x.drawImage(img,sx,sy,sw,sh,8,8,360,240);
+  const id=x.getImageData(8,8,360,240),d=id.data;const g=0.06*Z;for(let i=0;i<d.length;i+=4){const n=(Math.random()-0.5)*255*g;d[i]+=n;d[i+1]+=n;d[i+2]+=n;}x.putImageData(id,8,8);pr.img=c.toDataURL('image/jpeg',0.86);
+  const s=pr.scores;s.clarity=Math.round(s.clarity*clamp(1/Math.pow(Z,0.7),0.35,1));if(pr.anom){pr.anom.x=(pr.anom.x-r.x)*Z;pr.anom.y=(pr.anom.y-r.y)*Z;pr.anom.r*=Z;}
+  const f=(pr.anom?pr.anom.r*1.25:80)/720;const size=f<0.1?f/0.1:f<=0.5?1:Math.max(0.3,1-(f-0.5));const px=pr.anom?pr.anom.x:360,py=pr.anom?pr.anom.y:240;const thirds=[[240,160],[480,160],[240,320],[480,320]].reduce((m,p)=>Math.min(m,Math.hypot(px-p[0],py-p[1])),1e9)/720;s.framing=Math.round(100*(0.55*size+0.45*(1-clamp(thirds/0.25,0,1))));
+  pr.cropped=true;SFX.page();toast(`Cropped ×${Z.toFixed(1)}. Framing ${s.framing}, sharpness ${s.clarity}.`);INS.crop=null;$('#inspect .big').classList.remove('crop');if(INS.el){INS.el.querySelector('img').src=pr.img;}inspectPrint(pr,INS.el);saveGame();}
+function discover(pr){pr.discovered=true;SFX.tag();const ph=PHENOMENA[pr.subject.phen];$('#insUnk').textContent='◻ '+ph.mark;$('#insUnk').classList.add('on');$('#insSubj').textContent=ph.name;if(INS.el)INS.el.classList.add('anom');
+  G.captured[pr.subject.category]=(G.captured[pr.subject.category]||0)+1;if(pr.scores.clarity>=60)G.clearCaptured[pr.subject.category]=true;resolveRumor(pr.subject.phen);
+  if(!G.flags.firstDiscovery){G.flags.firstDiscovery=true;setTimeout(()=>toast('Tag it "sell" and take it to Halldór at the Courier, on Main street.',7000),800);}drawLoupe();refreshQuests();saveGame();}
+function tagPrint(tag){const pr=INS.pr;pr.tag=tag;SFX.click();if(INS.el){const t=INS.el.querySelector('.t');t.textContent=tag;t.className='t '+tag;}inspectPrint(pr,INS.el);}
+function closeInspect(){$('#inspect').classList.remove('on');INS=null;if($('#prints').classList.contains('on'))openPrints();}
+function openPrints(){showPanel('prints');const s=$('#printsStrip');s.innerHTML='';const list=G.prints.filter(p=>p.tag!=='discard');if(!list.length)s.innerHTML='<p style="color:var(--fog2)">No prints yet. Shoot a roll, then develop it downstairs.</p>';list.forEach(p=>s.appendChild(printEl(p,false)));}
+
+/* ---------------- courier ---------------- */
+function effective(pr){const ph=pr.subject.kind==='phen'&&pr.discovered;const cat=ph?pr.subject.category:'mundane';const s={...pr.scores};if(!ph&&pr.subject.kind==='phen'){s.rarity=4;s.story=Math.min(s.story,30);}return{cat,s,ph};}
+function appraise(pr){const {cat,s}=effective(pr);const comp=(0.4*s.clarity+0.2*s.framing+0.3*s.rarity+0.1*s.story);const place=comp<40?6:comp<70?3:1;const base={6:20,3:40,1:120}[place];
+  const n=G.soldCount[cat]||0;const best=G.soldBest[cat]||0;let rep=n===0?1:n===1?0.6:0.3;if(n>0&&s.clarity>=best+25)rep=1;const value=Math.max(4,Math.round(base*G.paper.mood*rep*(0.75+0.5*comp/100)));return{comp:Math.round(comp),place,base,rep,value,cat};}
+function openCourier(){dlgEnd();showPanel('courier');$('#courierSub').textContent=`Halldór, editor · mood: ${G.paper.mood>1.05?'keen':G.paper.mood<0.95?'wary':'even'} · ${G.paper.queue.length} queued for the next edition`;renderSale(null);
+  const sellable=G.prints.filter(p=>p.tag==='sell'&&!p.sold);if(!G.flags.metEditor){G.flags.metEditor=true;refreshQuests();if(sellable.some(p=>p.discovered))say([{who:'Halldór',text:'…'},{who:'Halldór',text:'Where was this?'},{who:'You',text:'The lighthouse. This morning.'},{who:'Halldór',text:"Hm. I'll take it. Page three. We don't do front pages on smudges. Get me something sharp."}]);}}
+function renderSale(sel){const th=$('#saleThumbs');th.innerHTML='';const list=G.prints.filter(p=>p.tag==='sell'&&!p.sold);
+  if(!list.length)th.innerHTML='<p style="color:var(--fog2);font-size:13px">No prints tagged for sale. Tag them "sell" in the darkroom or on the print shelf at home.</p>';
+  list.forEach(p=>{const e=printEl(p,false);e.onclick=()=>renderSale(p);if(sel&&sel.id===p.id)e.style.borderColor='var(--amber)';th.appendChild(e);});
+  const a=$('#appr');if(!sel){a.innerHTML=`<h3>The desk</h3><p class="q">Pick a print. Halldór rates it on four counts and chooses the page. The page sets the pay, and later, the attention.</p><p style="font:12px var(--mono);color:var(--fog2)">page 6 · under 40 &nbsp;&nbsp; page 3 · 40–69 &nbsp;&nbsp; front page · 70+</p>`;return;}
+  const ap=appraise(sel),{s}=effective(sel);const first=!G.flags.saleOnce;const bar=(k,v,cls)=>`<div class="score ${cls||''}"><span>${k}</span><i><s style="width:${v}%"></s></i><b>${v}</b></div>`;
+  const low=(first&&s.clarity<55)?'clarity':Object.entries({clarity:s.clarity,framing:s.framing,rarity:s.rarity,story:s.story}).sort((x,y)=>x[1]-y[1])[0][0];
+  const quote=ap.place===1?"Now that's a front page. Don't let it go to your head.":ap.place===3?(s.clarity<50?"Page three. It's soft. Get closer or get steadier.":"Page three. Decent. Readers like a picture with the tower in it."):(ap.cat==='mundane'?"Local color. Page six, small. It fills a hole.":"Page six. Nobody will see it there, which is possibly for the best.");
+  a.innerHTML=`<h3>${sel.discovered?PHENOMENA[sel.subject.phen].name:sel.subject.label}</h3><p class="q">“${quote}”</p>${bar('sharpness',s.clarity,low==='clarity'?'lo':'')}${bar('framing',s.framing,low==='framing'?'lo':'')}${bar('subject',s.rarity,s.rarity>=70?'hi':low==='rarity'?'lo':'')}${bar('story',s.story,low==='story'?'lo':'')}
+    <div class="comp"><span>composite <b>${ap.comp}</b></span><span class="place">${ap.place===1?'front page':'page '+ap.place}${ap.rep<1?' · repeat, '+Math.round(ap.rep*100)+'%':''}</span></div>
+    <div class="actions"><button class="primary" onclick="sellPrint('${sel.id}')">Sell for $${ap.value}</button><button onclick="renderSale(null)">Keep it</button></div>
+    ${first?'<p style="font:12px/1.4 var(--type);color:var(--fog2);margin-top:12px">Sharpness is what the lens, the light and your hands did. Subject is what was in front of you. Framing and story are the rest.</p>':''}`;}
+function sellPrint(id){const pr=G.prints.find(p=>p.id===id);const ap=appraise(pr);pr.sold=true;pr.placement=ap.place;G.money+=ap.value;SFX.coin();G.flags.saleOnce=true;
+  G.soldCount[ap.cat]=(G.soldCount[ap.cat]||0)+1;G.soldBest[ap.cat]=Math.max(G.soldBest[ap.cat]||0,effective(pr).s.clarity);
+  G.paper.queue.push({printId:pr.id,place:ap.place,value:ap.value,cat:ap.cat,day:G.day});toast(`Sold for $${ap.value}. It runs in the next edition${ap.place===1?' — front page.':'.'}`);hud();renderSale(null);$('#courierSub').textContent=`Halldór, editor · ${G.paper.queue.length} queued for the next edition`;refreshQuests();saveGame();}
+
+/* ---------------- issue / print day ---------------- */
+let PAPER_AFTER=null;
+function publishIssue(){const q=G.paper.queue.splice(0);q.sort((a,b)=>a.place-b.place);const lead=q[0];const leadPr=G.prints.find(p=>p.id===lead.printId);const issue={n:G.paper.issues.length+1,day:G.day,items:q,lead:lead.printId,hl:pick(HEADLINES[lead.cat][lead.place===1?'front':lead.place===3?'p3':'p6'])};G.paper.issues.push(issue);G.publishedToday=true;
+  let att=0;q.forEach(it=>{att+={6:2,3:5,1:12}[it.place];G.published[it.cat]=(G.published[it.cat]||0)+1;});const before=G.attention;G.attention=clamp(G.attention+att,0,100);G.paper.mood=clamp(1+(lead.place===1?0.15:lead.place===3?0.05:-0.1),0.8,1.3);
+  const firstFront=lead.place===1&&!G.flags.firstFront;renderPaper(issue,leadPr);showPanel('paperview');SFX.press();
+  PAPER_AFTER=()=>{activateRumors();if(firstFront){G.flags.firstFront=true;G.flags.sedan=true;G.attentionVisible=true;cards(['The press runs all night.','Morning. The paper is on every doorstep on the island.','Three locals stand on Main street, reading. Nobody says anything.'],()=>{hud();toast(`Attention ${before} → ${G.attention}. People are looking now.`,7000);setTimeout(()=>toast('A plain sedan is parked by the harbor. It was not there before. Nobody comments.',9000),2500);refreshQuests();});}
+    else if(G.attentionVisible){hud();toast(`Attention +${att}.`);}refreshQuests();saveGame();};}
+function closePaper(){closePanel();const f=PAPER_AFTER;PAPER_AFTER=null;f&&f();}
+function renderPaper(issue,leadPr){const lead=issue.items[0];const cat=lead.cat;const hl=issue.hl||pick(HEADLINES[cat][lead.place===1?'front':lead.place===3?'p3':'p6']);const story=STORIES[cat];
+  const others=issue.items.slice(1).map(it=>{const p=G.prints.find(x=>x.id===it.printId);return `${p.discovered?PHENOMENA[p.subject.phen].name:p.subject.label} (page ${it.place})`;});
+  $('#paper').innerHTML=`<div class="mast">The Island Courier</div><div class="date"><span>Edition ${issue.n} · Day ${issue.day}</span><span>Fog, against the wind</span><span>Price 1 krone</span></div><div class="pg">${lead.place===1?'FRONT PAGE':'PAGE '+lead.place}</div>
+    <div class="lead ${lead.place===1?'':lead.place===3?'small':'small tiny'}"><div><h1>${hl}</h1><div class="body">${story.slice(0,lead.place===1?3:2).map(s=>`<p>${s}</p>`).join('')}</div></div><div class="photo"><img src="${leadPr?leadPr.img:''}" alt=""><div class="cap">${leadPr?(leadPr.discovered?PHENOMENA[leadPr.subject.phen].name:leadPr.subject.label)+', '+LOCS[leadPr.zone].name.toLowerCase()+', '+leadPr.slot.toLowerCase():''}. Photograph: the Courier's new contributor.</div></div></div>
+    ${others.length?`<div class="also">Also in this edition: ${others.join(' · ')}.</div>`:''}<div class="also">${lead.place===1?'The base was asked for comment and provided none. — Ed.':'Ferry timetable, page 4. Tide tables, page 5. Letters, page 6.'}</div>`;}
+
+/* ---------------- settings ---------------- */
+function openSettings(){showPanel('settings');const b=$('#setBody');b.innerHTML=`<label>Volume</label><input type="range" min="0" max="1" step="0.05" value="${SET.vol}" oninput="SET.vol=+this.value;saveSettings()">
+  <label>Mute</label><input type="checkbox" ${SET.mute?'checked':''} onchange="SET.mute=this.checked;saveSettings()"><label>Mouse sensitivity</label><input type="range" min="0.3" max="2.5" step="0.1" value="${SET.sens}" oninput="SET.sens=+this.value;saveSettings()">
+  <label>Invert look Y</label><input type="checkbox" ${SET.invert?'checked':''} onchange="SET.invert=this.checked;saveSettings()"><label>Capture the mouse</label><input type="checkbox" ${SET.lock?'checked':''} onchange="SET.lock=this.checked;saveSettings()">
+  <label>Controls</label><span style="font-size:12px">WASD walk · mouse look · E use · M chart · I bag · J journal · C / right click camera · click shoot · wheel zoom · T tripod · Space wait</span>`;}
+function toTitle(){saveGame();disposeScene();G=null;SES=null;showPanel('title');MODE='title';$('#btnCont').style.display='inline-block';setAmbient({});}
+</script>
+<script>
+/* ---------------- build 4: shop at the counter, routine, watch, food, events, people ---------------- */
+let shopTab='buy';
+function openShop(tab){dlgEnd();showPanel('shop');renderShop(tab||'buy');}
+function renderShop(tab,sel){shopTab=tab;$('#shopSub').innerHTML=`Marit · you have <span class="money">$${G.money}</span>`;const tabs=$('#shopTabs');tabs.innerHTML='';[['buy','Buy'],['sell','Sell']].forEach(([id,l])=>{const b=document.createElement('button');b.textContent=l;b.className=shopTab===id?'on':'';b.onclick=()=>renderShop(id);tabs.appendChild(b);});
+  const grid=$('#shopGrid');grid.innerHTML='';let entries=[];
+  if(tab==='buy'){entries=['lens135','tripod','enlarger','film400','film100','tin'].map(id=>({id,kind:'item'}));}
+  else{Object.entries(G.inv).forEach(([id,n])=>{const it=ITEMS[id];if(!n||!it||!it.price)return;if(it.kind==='lens'&&G.equip.lens===id)return;entries.push({id,kind:'item'});});G.prints.filter(p=>p.tag==='sell'&&!p.sold).forEach(p=>entries.push({id:p.id,kind:'print',pr:p}));}
+  if(!sel||!entries.some(e=>e.id===sel))sel=entries.length?entries[0].id:null;
+  if(!entries.length)grid.innerHTML=`<p style="color:var(--fog2);grid-column:1/-1">${tab==='buy'?'Nothing on the shelves.':'Nothing she wants. Spare gear and film sell at half. Prints tagged "sell" go on the postcard rack.'}</p>`;
+  entries.forEach(e=>{const d=document.createElement('div');d.className='slot'+(e.id===sel?' on':'');if(e.kind==='item'){const it=ITEMS[e.id];const owned=it.kind!=='film'&&it.kind!=='food'&&has(e.id);d.innerHTML=`<div class="tag">${tab==='buy'?(owned?'owned':'$'+it.price):'$'+Math.floor(it.price/2)}</div><h4>${it.name}</h4><p>${tab==='buy'?it.enables||'':'in the bag'+(G.inv[e.id]>1?' × '+G.inv[e.id]:'')}</p>`;}
+    else{const p=e.pr;d.innerHTML=`<div class="tag">$${maritPrice(p)}</div><h4>${p.discovered?PHENOMENA[p.subject.phen].name:p.subject.label}</h4><p>${p.id} · ${LOCS[p.zone].name}</p>`;}
+    d.onclick=()=>renderShop(tab,e.id);grid.appendChild(d);});
+  const turn=$('#shopTurn');turn.innerHTML='';if(!sel)return;const e=entries.find(x=>x.id===sel);const info=document.createElement('div');info.className='info';
+  if(e.kind==='item'){const it=ITEMS[e.id];ivShow(e.id,turn);const owned=it.kind!=='film'&&it.kind!=='food'&&has(e.id);
+    if(tab==='buy')info.innerHTML=`<h3>${it.name}</h3>${it.desc}<br><b>Enables:</b> ${it.enables||'—'}${(it.kind==='film'||it.kind==='food')&&has(e.id)?`<br>You have ${G.inv[e.id]}.`:''}<div style="margin-top:10px">${owned?'<b>owned</b>':`<button class="primary" ${G.money>=it.price?'':'disabled'} onclick="buy('${e.id}')">Buy · $${it.price}</button>`}</div>`;
+    else info.innerHTML=`<h3>${it.name}</h3>${it.desc}<div style="margin-top:10px"><button class="primary" onclick="sellItem('${e.id}')">Sell · $${Math.floor(it.price/2)}</button> <span style="font-size:12px">"Half. It's been used, I can smell the sea on it."</span></div>`;}
+  else{const p=e.pr;turn.innerHTML=`<img src="${p.img}" alt="" style="display:block;width:318px;height:216px;object-fit:cover">`;info.innerHTML=`<h3>${p.discovered?PHENOMENA[p.subject.phen].name:p.subject.label}</h3>For the postcard rack. Quiet money: the paper never hears of it and nobody comes looking.<div style="margin-top:10px"><button class="primary" onclick="sellPrintMarit('${p.id}')">Sell · $${maritPrice(p)}</button></div>`;}
+  turn.appendChild(info);}
+function maritPrice(p){return p.discovered?14:p.scores.clarity>=60?9:6;}
+function sellItem(id){const it=ITEMS[id];if(!has(id))return;G.inv[id]--;if(G.inv[id]<=0)delete G.inv[id];G.money+=Math.floor(it.price/2);SFX.coin();if(SC&&SC.stands){const st=SC.stands.find(s=>s.id===id);if(st)st.m.visible=true;}toast(`Sold the ${it.name.toLowerCase()} for $${Math.floor(it.price/2)}.`);hud();renderShop('sell');saveGame();}
+function sellPrintMarit(id){const p=G.prints.find(x=>x.id===id);p.sold=true;p.soldTo='marit';G.money+=maritPrice(p);SFX.coin();toast(`Marit takes it for the rack. $${maritPrice(p)}, and nobody the wiser.`);hud();renderShop('sell');saveGame();}
+/* --- morning routine --- */
+function openRoutine(){showPanel('routine');$('#rtSub').textContent=`Day ${G.day} · ${fmtTime()} · before the door`;const B=$('#rtBody');B.innerHTML='';const r=G.roll;
+  const row=(title,text,acts,done)=>{const d=document.createElement('div');d.className='rt'+(done?' done':'');d.innerHTML=`<div><h4>${title}</h4><p>${text}</p></div><div class="acts">${acts}</div>`;B.appendChild(d);};
+  row('Wipe the lens',G.lensDirty?'Fog leaves a film on the glass overnight. A hazed lens softens every print by a seventh.':'Clean. The glass looks like nothing at all, which is right.',G.lensDirty?`<button class="small primary" onclick="wipeLens(openRoutine)">Wipe</button><span class="wipe" id="wipeBar"><s></s></span>`:'<b style="color:var(--good)">done</b>',!G.lensDirty);
+  row('Mount a lens',`${ITEMS[G.equip.lens].name} on the body.`,Object.keys(G.inv).filter(id=>ITEMS[id]&&ITEMS[id].kind==='lens').map(id=>`<button class="small ${G.equip.lens===id?'primary':''}" onclick="G.equip.lens='${id}';if('${id}'==='lens135')G.equip.focal=135;SFX.click();openRoutine()">${ITEMS[id].name}</button>`).join(''),true);
+  row('Film',r?`ISO ${r.iso} loaded, ${r.exp-r.shots.length} of ${r.exp} left.${r.shots.length?' Rewind it before swapping.':''}`:'The camera is empty.',Object.keys(G.inv).filter(id=>ITEMS[id]&&ITEMS[id].kind==='film').map(id=>`<button class="small" ${r&&r.shots.length?'disabled':''} onclick="loadFilm('${id}');openRoutine()">${r?'Swap in':'Load'} ISO ${ITEMS[id].iso} (${G.inv[id]})</button>`).join('')+(r&&r.shots.length?`<button class="small" onclick="rewindRoll();openRoutine()">Rewind</button>`:''),!!r);
+  row('Eat',G.ateBread<G.day?'Bread and a tin from the cupboard. Thirty-five on the meter.':'You have eaten. The diner does eggs for four if it is not enough.',G.ateBread<G.day?`<button class="small" onclick="G.ateBread=G.day;eat(35,'Bread, hard, and something from a tin.');openRoutine()">Eat</button>`:'<b style="color:var(--good)">done</b>',G.ateBread>=G.day);
+  const go=document.createElement('div');go.style.cssText='margin-top:10px;display:flex;gap:10px';go.innerHTML=`<button class="primary" onclick="G.routineDay=G.day;closePanel();openMap()">Go out</button><button class="ghost" onclick="closePanel()">Stay in</button>`;B.appendChild(go);
+  const turn=$('#rtTurn');turn.innerHTML='';ivShow(G.lensDirty?'cloth':G.equip.lens,turn);const info=document.createElement('div');info.className='info';info.innerHTML=`<h3>${G.lensDirty?'The lens cloth':ITEMS[G.equip.lens].name}</h3>${G.lensDirty?'Breathe on the glass, wipe in one direction, do not think about what the fog is made of.':'Ready.'}`;turn.appendChild(info);}
+function wipeLens(after){if(!G.lensDirty){after&&after();return;}const bar=$('#wipeBar s');let t=0;SFX.page();const iv=setInterval(()=>{t+=0.1;if(bar)bar.style.width=Math.min(100,t/1.2*100)+'%';if(t>=1.2){clearInterval(iv);G.lensDirty=false;addTime(3);toast('The lens is clean. The day can be sharp now.');after&&after();}},100);}
+/* --- food --- */
+function eat(n,text){G.food=clamp(G.food+n,0,100);SFX.pick();addTime(10);hud();if(text)say([{who:'',text}]);saveGame();}
+function eatItem(id){const it=ITEMS[id];if(!has(id))return;G.inv[id]--;if(G.inv[id]<=0)delete G.inv[id];eat(it.food,'Herring in oil, from the bag, with your fingers. Forty on the meter and the sea on your hands.');openInventory();}
+function dinerMenu(){const box_=$('#dlgTopics');box_.innerHTML='';$('#dlgMore').style.display='none';DLG.after=()=>{};const opt=(l,fn)=>{const b=document.createElement('button');b.textContent=l;b.onclick=fn;box_.appendChild(b);};
+  opt('Eggs and coffee · $4',()=>{if(G.money<4){toast('Not enough for eggs.');return;}G.money-=4;dlgEnd();eat(60,'Eggs, coffee, the window. Sigrún does not ask what you were photographing, which is how you know she knows.');});
+  opt('Coffee · $1',()=>{if(G.money<1){toast('Not even a dollar.');return;}G.money-=1;dlgEnd();eat(15,'Coffee. Adequate, by popular agreement.');});
+  const b=document.createElement('button');b.className='ghost';b.textContent='Leave';b.onclick=dlgEnd;box_.appendChild(b);}
+/* --- watch: wait until a time --- */
+function openWatch(){showPanel('watch');$('#wSub').textContent=`Day ${G.day} · ${fmtTime()} · ${G.slot}`;const B=$('#wBody');B.innerHTML='';const h=G.time/60;
+  const row=(title,text,acts)=>{const d=document.createElement('div');d.className='rt';d.innerHTML=`<div><h4>${title}</h4><p>${text}</p></div><div class="acts">${acts}</div>`;B.appendChild(d);};
+  row('Wait a little','Fifteen minutes or an hour. In the field this counts as a stakeout.',`<button class="small" onclick="waitUntil(G.time+15)">+15 min</button><button class="small" onclick="waitUntil(G.time+60)">+1 hour</button>`);
+  const bands=[[11,'Midday'],[16,'Evening'],[20.5,'Night']].filter(([t])=>t>h+0.05);row('Wait for the light to change','Bands set what appears and who is where.',bands.map(([t,n])=>`<button class="small" onclick="waitUntil(${t*60})">${n} · ${String(Math.floor(t)).padStart(2,'0')}:${t%1?'30':'00'}</button>`).join('')||'<b>no band left today; sleep at the house</b>');
+  const opts=[];for(let hh=Math.floor(h)+1;hh<=26;hh++)opts.push(`<option value="${hh*60}">${String(hh%24).padStart(2,'0')}:00${hh>=24?' (past midnight)':''}</option>`);
+  row('Wait until','Pick an hour. Past two in the morning you will not stay on your feet.',`<select id="wSel" style="font:13px var(--mono);background:#141b1e;color:var(--fog);border:1px solid #33403f;padding:5px">${opts.join('')}</select><button class="small primary" onclick="waitUntil(+document.getElementById('wSel').value)">Wait</button>`);
+  const turn=$('#wTurn');turn.innerHTML='';ivShow('watch',turn);const info=document.createElement('div');info.className='info';info.innerHTML=`<h3>${fmtTime()}</h3>Island time. Food drops four an hour; the fog does what it wants.`;turn.appendChild(info);}
+function waitUntil(t){const mins=Math.max(0,Math.round(t-G.time));if(!mins){closePanel();return;}closePanel();fade(()=>{if(SES){SES.waited++;SES.t+=mins*0.8;Object.keys(SES.timers).forEach(id=>{if(SES.timers[id]!==null)SES.timers[id]-=mins*0.8;});}const b0=G.slot;addTime(mins);if(G.slot!==b0&&SC){enterLoc(G.loc);}else{toast(`${fmtTime()}. ${mins>=60?'The fog does not move.':'…'}`);}},350);}
+/* --- random events & life --- */
+function readerTip(){const ph=Object.values(PHENOMENA).find(p=>!G.clearCaptured[p.category]);const z=ph?LOCS[ph.zones[0]].name:'the church';const w=ph?ph.slots.join(' or '):'three in the morning';toast(`The note, in pencil: "${z}, ${w.toLowerCase()}. Go before it stops coming."`,9000);G.flags.readerTip=true;}
+const EVENTS=[
+  {loc:'street',w:3,text:'A dog with one white ear follows you half the street, then loses interest at the church.'},
+  {loc:'street',w:2,when:()=>G.paper.issues.length>0,text:'A woman you do not know stops you. "You\'re the one with the camera." She presses a folded note into your hand and walks on without waiting.',fx:readerTip},
+  {loc:'street',w:1,when:()=>G.attention>=10,text:'Two men in good coats stand outside the Courier, not going in. One writes something down when you pass.',fx:()=>{G.attention=Math.min(100,G.attention+1);hud();}},
+  {loc:'street',w:2,when:()=>G.slot==='Evening',text:'The school lets out late. Three children run past you toward the harbor, and one of them is counting under her breath.'},
+  {loc:'harbor',w:3,text:'Gulls fight over a fish head on the quay. One wins. The others watch the water instead of the winner.'},
+  {loc:'harbor',w:2,when:()=>G.slot!=='Night',text:'The ferry horn, once. Nobody on the quay looks up, which is how you know they heard it.'},
+  {loc:'harbor',w:1,when:()=>G.day>=2,text:"Aksel's boat is in. On the wheelhouse door, chalk marks in rows of five. Forty-three today."},
+  {loc:'harbor',w:1,when:()=>G.slot==='Night',text:'Something knocks against the underside of the quay, twice, patient, and then does not.'},
+  {loc:'lighthouse',w:2,when:()=>G.day>=2,text:'Someone has been here since yesterday: a thermos, a folding stool, a cigarette put out carefully. Not a local brand.',fx:()=>{G.attention=Math.min(100,G.attention+1);hud();}},
+  {loc:'lighthouse',w:2,when:()=>G.slot==='Morning',text:'A tourist in a yellow coat asks if this is where the picture was taken. She buys nothing, but she says the gulls were quiet at the cove on Tuesday.'},
+  {loc:'lighthouse',w:1,text:'The beam turns in daylight for a moment, then stops. The keeper left years ago.'},
+  {loc:'woods',w:2,text:'A fox crosses the path and stops to look at you longer than a fox should.'},
+  {loc:'woods',w:2,when:()=>G.slot==='Night'||G.slot==='Evening',text:'A truck on the fence road, lights off, moving slowly the wrong way for a truck.',fx:()=>{G.flags.base_foreshadow=true;}},
+  {loc:'home',w:2,when:()=>G.paper.issues.length>0,text:'An envelope under the door. No stamp. Inside, a reader\'s tip in pencil.',fx:readerTip},
+  {loc:'home',w:1,text:'The telephone rings once. It is not connected.'},
+  {loc:'home',w:1,when:()=>G.day>=2,text:'The lamp flickers, steadies. In the window the fog is going out against the wind again.'},
+  {loc:'shop',w:1,text:'Marit is winding a clock that is not for sale. "It runs slow on foggy days. Everything does."'}];
+function rollEvent(){if(!G||!SC||MODE!=='world')return;const key=G.loc+':'+G.day+':'+G.slot;if(G.eventsSeen[key])return;G.eventsSeen[key]=true;if(Math.random()>0.4)return;const pool=EVENTS.filter(e=>e.loc===G.loc&&(!e.when||e.when()));if(!pool.length)return;let tot=pool.reduce((n,e)=>n+e.w,0),r=Math.random()*tot,ev=pool[0];for(const e of pool){r-=e.w;if(r<=0){ev=e;break;}}say([{who:'',text:ev.text}],()=>{ev.fx&&ev.fx();});}
+function notePerson(id,text){const P=G.people[id];if(!P)return;if(!P.notes.includes(text)){P.notes.push(text);if(P.notes.length>6)P.notes.shift();}}
+/* --- a dog on the street --- */
+function streetDog(sc){const g=new T.Group();const body=new T.Mesh(new T.BoxGeometry(0.6,0.3,0.25),M(0x6a5a45));body.position.y=0.4;g.add(body);hull(body);const head=new T.Mesh(new T.BoxGeometry(0.22,0.2,0.22),M(0x6a5a45));head.position.set(0.38,0.5,0);g.add(head);hull(head);const ear=new T.Mesh(new T.BoxGeometry(0.06,0.1,0.04),M(0xe8e1cf));ear.position.set(0.4,0.63,0.08);g.add(ear);for(const [x,z] of[[-0.2,-0.08],[-0.2,0.08],[0.2,-0.08],[0.2,0.08]]){const l=new T.Mesh(new T.BoxGeometry(0.06,0.3,0.06),M(0x5a4a38));l.position.set(x,0.15,z);g.add(l);}sc.add(g);
+  SC.anim.push(t=>{const z=-30+((t*0.9)%44);g.position.set(-3.6+Math.sin(t*0.5)*0.6,0,z);g.rotation.y=Math.PI/2;body.position.y=0.4+Math.abs(Math.sin(t*6))*0.03;});return g;}
+</script>
+<script>
+/* ---------------- loop, input, start ---------------- */
+let minuteAcc=0;
+function tick(dt){ivTick(dt);if(!G||!SC)return;SC.t+=dt;if(MODE==='world'){updatePlayer(dt);if(SES)updateSession(dt);updateCamera(dt);if(SC.tail)updateTail(dt);if(!LOCS[G.loc].interior||G.loc==='shop'){minuteAcc+=dt;if(minuteAcc>=1){addTime(Math.floor(minuteAcc));minuteAcc-=Math.floor(minuteAcc);}}}else PL.movedFlag=false;
+  SC.anim.forEach(f=>f(SC.t));placeCameras();render();drawOverlay();if(MODE==='world')worldPrompt();if(MODE==='panel'&&DR)drUpdate(dt);if(dbg)debugText();}
+function loop(ts){const dt=Math.min(0.05,(ts-lastT)/1000||0.016);lastT=ts;tick(dt);requestAnimationFrame(loop);}
+requestAnimationFrame(loop);
+addEventListener('keydown',e=>{const k=e.code;if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(k))e.preventDefault();if(e.repeat)return;keys.add(k);
+  if(k==='Backquote'){dbg=!dbg;$('#debug').classList.toggle('on',dbg);return;}
+  if(MODE==='dlg'){if(k==='Space'||k==='Enter')dlgNext();if(k==='Escape')dlgEnd();return;}
+  if(cardsBusy)return;
+  if(MODE==='world'){if(k==='KeyE'||k==='Enter'){if(!CAM.raised){const h=nearestHot();if(h)h.fn();}}if(k==='KeyC')toggleCamera();if(k==='KeyM'&&!CAM.raised)openMap();if(k==='KeyI'&&!CAM.raised)openInventory();if(k==='KeyJ'&&!CAM.raised)openJournal();if(k==='KeyN'&&!CAM.raised)openWatch();if(k==='Escape'){if(CAM.raised)toggleCamera();else openSettings();}
+    if(k==='Space'&&!CAM.raised&&SES)fieldWait();if(k==='KeyT'&&has('tripod')&&SES){if(G.loc==='boat'){cue('Not on a boat.');return;}CAM.tripod=!CAM.tripod;CAM.tripodT=0;SES.stillT=0;SFX.tripod();}if(k==='KeyF')cue('No flash on this body.');
+    if(dbg&&k==='F1'){G.money+=100;hud();}if(dbg&&k==='F2'){addTime(60);enterLoc(G.loc);}if(dbg&&k==='F3'){G.inv.lens135=1;G.inv.tripod=1;G.inv.enlarger=1;G.inv.film400=(G.inv.film400||0)+2;toast('debug: gear');hud();}if(dbg&&k==='F4'&&SES){const ph=Object.values(PHENOMENA).find(p=>p.zones.includes(SES.zone));if(ph)spawnPhen(ph,true);}}
+  else if(MODE==='panel'){if(k==='Escape'){if($('#card').classList.contains('on'))closeCard();else if($('#inspect').classList.contains('on'))closeInspect();else if($('#paperview').classList.contains('on'))closePaper();else if(!(DR&&DR.step==='prints'&&$('#drDone').style.display==='none'))closePanel();}
+    if(k==='KeyI'&&$('#inventory').classList.contains('on'))closePanel();if(k==='KeyM'&&$('#map').classList.contains('on'))closePanel();if(k==='KeyJ'&&$('#journal').classList.contains('on'))closePanel();if(k==='KeyN'&&$('#watch').classList.contains('on'))closePanel();}});
+addEventListener('keyup',e=>{keys.delete(e.code);if(MODE==='panel'&&DR&&e.code==='Space')drRelease();});
+gl.addEventListener('mousemove',e=>{if(MODE!=='world')return;const sens=0.0026*SET.sens*(CAM.raised?50/focalNow():1);PL.yaw-=e.movementX*sens;PL.pitch=clamp(PL.pitch-e.movementY*sens*(SET.invert?-1:1),-1.25,1.25);if(SES)SES.lookMoved+=Math.abs(e.movementX*sens)+Math.abs(e.movementY*sens);});
+gl.addEventListener('mousedown',e=>{auInit();if(MODE==='dlg'){if(e.button===0)dlgNext();return;}if(cardsBusy||MODE!=='world')return;
+  if(SET.lock&&document.pointerLockElement!==gl){try{gl.requestPointerLock();}catch(err){}}
+  if(e.button===2){toggleCamera();return;}if(e.button===0){if(CAM.raised)takeShot();else{const h=nearestHot();if(h)h.fn();}}});
+gl.addEventListener('contextmenu',e=>e.preventDefault());
+gl.addEventListener('wheel',e=>{e.preventDefault();if(MODE!=='world'||!CAM.raised)return;if(G.equip.lens!=='lens135'){cue('Fixed 50mm. No reach on this lens.',1500);return;}G.equip.focal=clamp((G.equip.focal||135)+(e.deltaY<0?17:-17),50,135);if(G.equip.focal>128)G.equip.focal=135;if(G.equip.focal<57)G.equip.focal=50;SFX.zoom();hud();},{passive:false});
+$('#dlg').addEventListener('click',e=>{if(e.target.tagName!=='BUTTON')dlgNext();});
+function focalNow(){return G.equip.lens==='lens135'?(G.equip.focal||135):50;}
+function startNew(){newGame();showPanel(null);MODE='panel';auInit();hud();refreshQuests();
+  cards(['The ferry docks at dusk, in fog.','A suitcase. A camera bag that was your grandfather\'s.','Nobody is waiting. Someone is watching from the diner door.'],()=>{enterLoc('harbor');saveGame();});}
+$('#btnNew').onclick=startNew;$('#btnCont').onclick=()=>{if(loadGame()){showPanel(null);auInit();enterLoc(G.loc);toast(`Day ${G.day}, ${fmtTime()}. Welcome back.`);}};
+if(localStorage.getItem('islandphoto3.save'))$('#btnCont').style.display='inline-block';
+showPanel('title');
+</script>
+
+</body>
+</html>

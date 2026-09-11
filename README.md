@@ -1,9 +1,13 @@
-# The Island Photographer — build 7
+# The Island Photographer — build 8
 
 Single-file web prototype of the Oone Films GDD v0.1: `index.html` (Three.js r128 from cdnjs, Google Fonts, nothing else).
 Earlier builds are kept as `v1-topdown.html` and `v2-firstperson.html`. The plan this build follows is `PLAN-build3.md`.
 
-## What build 7 adds
+## What build 8 adds
+
+- Screen-space ink outlines (toggle in Settings), blob shadows, a color grade per time of day, wind on trees and grass, moving water with foam, cobbled street, and props in every area: crates, barrels, nets, pots, bollards, benches, bins, a cart, a winch, rope fences, stumps, logs, boulders, chimneys.
+
+## What build 7 added
 
 - Every area has a visible, lit Exit signpost that opens the chart (the shop door now opens the chart too).
 

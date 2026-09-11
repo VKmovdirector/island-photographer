@@ -1,4 +1,4 @@
-# The Island Photographer — Design Document (build 7)
+# The Island Photographer — Design Document (build 8)
 
 Working title. Oone Films. This document describes every mechanic in the current prototype as built, with the numbers the code uses. It follows the GDD v0.1 brief and records where the build departs from it.
 
@@ -18,14 +18,14 @@ A full day takes roughly ten to fifteen minutes of real time.
 
 ## 3. World and locations
 
-All locations are first-person 3D, low poly, cel shaded (three-step toon ramp, flat shading, dark hull outlines on props and people, banded sky dome). Travel happens through an admiralty chart (M). Every area also has a visible exit: a lit signpost with an "Exit" tag (two on Main street, one each at the harbor, the cliff path, the woods path, the shop door, and the house's front door) that opens the chart when you use it. Only Aksel's boat has no post; you ask Aksel to turn back.
+All locations are first-person 3D, low poly, cel shaded (three-step toon ramp, flat shading, banded sky dome). Outlines come from a screen-space ink pass: the scene is rendered to color, depth, and flat normals, and a full-screen shader draws a one-pixel ink line where depth or normals break, fading with the fog. Hull outlines are used only when the pass is off (Settings). Every prop, tree, post, and person has a soft blob shadow on the ground. Each time band adds a color grade on top (cold blue morning, chalk midday, rust evening, ink night; slate in rain). Tree canopies and grass tufts sway in a vertex-shader wind; the near sea is a displaced mesh with faceted waves and a foam line at the quay. Travel happens through an admiralty chart (M). Every area also has a visible exit: a lit signpost with an "Exit" tag (two on Main street, one each at the harbor, the cliff path, the woods path, the shop door, and the house's front door) that opens the chart when you use it. Only Aksel's boat has no post; you ask Aksel to turn back.
 
 - **Grandfather's house** (interior). Bed, kitchen table with the letter and notebook, cupboard, camera bag, print shelf, basement door (darkroom), attic stair (nailed shut), front door. A wall clock shows the game time.
-- **Main street.** Diner (Sigrún), the Courier (Halldór), school, houses, the church with an over-tall spire. Street lamps at night. A dog with one white ear by day. The sedan and the Man from Attention tier 1.
-- **Harbor.** Quay with lamp posts, Aksel's boat, a moored boat, the ferry, Marit's shop door, the harbor road. The sedan after the first front page.
+- **Main street.** A cobbled road (3,360 instanced stones), low stone walls with grass along both sides, benches, bins, barrels, crates, a hand cart, chimneys with smoke, lit window panes at dusk. Diner (Sigrún), the Courier (Halldór), school, houses, the church with an over-tall spire. Street lamps at night. A dog with one white ear by day. The sedan and the Man from Attention tier 1.
+- **Harbor.** Quay with lamp posts, bollards, crates, barrels, net piles, lobster pots, a winch, a bench, moving water with foam, Aksel's boat, a moored boat, the ferry, Marit's shop door, the harbor road. The sedan after the first front page.
 - **Marit's shop** (interior). Counter, shelves with turning item models. Trade happens at the counter through dialogue.
-- **Lighthouse cliff.** Plateau above the sea, the tower with a beam at dusk and night, rocks, a cairn of scratched stones, gulls, a fishing boat far out.
-- **North woods.** Instanced spruce forest, the base fence with signs, a searchlight tower that sweeps once at night.
+- **Lighthouse cliff.** Plateau with gentle terrain noise, seven hundred grass tufts, jittered boulders, a rope fence along the edge, a bench and a winch, above moving water, the tower with a beam at dusk and night, rocks, a cairn of scratched stones, gulls, a fishing boat far out.
+- **North woods.** Instanced spruce forest with wind, stumps, logs, rocks, ferns, the base fence with signs, a searchlight tower that sweeps once at night.
 - **Aksel's boat.** A moving deck at dusk or night along the base shore: hangar, fence, lights, searchlight. Reached through Aksel at trust 2.
 
 ## 4a. Weather

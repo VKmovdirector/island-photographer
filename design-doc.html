@@ -17,7 +17,7 @@ table{border-collapse:collapse;width:100%;font:13px var(--mono)}
 th{text-align:left;font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:11px;color:var(--ink2);border-bottom:1px solid var(--ink);padding:6px 8px}
 td{border-bottom:1px solid var(--rule);padding:6px 8px;vertical-align:top;font-variant-numeric:tabular-nums}
 </style>
-<main><h1>The Island Photographer — Design Document (build 7)</h1>
+<main><h1>The Island Photographer — Design Document (build 8)</h1>
 <p>Working title. Oone Films. This document describes every mechanic in the current prototype as built, with the numbers the code uses. It follows the GDD v0.1 brief and records where the build departs from it.</p>
 <h2>1. Premise and tone</h2>
 <p>A former reporter inherits his grandfather's house on a North Atlantic island of about two thousand people. He arrives by ferry at dusk with a suitcase and a film camera. His first roll, shot at the lighthouse, holds something he did not see. The island's paper buys it. From there every publication changes the island and draws attention from a military base behind a fence, from researchers, and from men in plain sedans.</p>
@@ -27,14 +27,14 @@ td{border-bottom:1px solid var(--rule);padding:6px 8px;vertical-align:top;font-v
 <p>One in-game day is one loop. Morning routine at the house, leads from people, travel by chart, a stakeout or shoot, develop in the basement, sell at the Courier or quietly to Marit, buy gear, sleep. The paper goes out when the time band changes after a sale. Attention rises with what is published. Rumors spawn from editions and from people.</p>
 <p>A full day takes roughly ten to fifteen minutes of real time.</p>
 <h2>3. World and locations</h2>
-<p>All locations are first-person 3D, low poly, cel shaded (three-step toon ramp, flat shading, dark hull outlines on props and people, banded sky dome). Travel happens through an admiralty chart (M). Every area also has a visible exit: a lit signpost with an "Exit" tag (two on Main street, one each at the harbor, the cliff path, the woods path, the shop door, and the house's front door) that opens the chart when you use it. Only Aksel's boat has no post; you ask Aksel to turn back.</p>
+<p>All locations are first-person 3D, low poly, cel shaded (three-step toon ramp, flat shading, banded sky dome). Outlines come from a screen-space ink pass: the scene is rendered to color, depth, and flat normals, and a full-screen shader draws a one-pixel ink line where depth or normals break, fading with the fog. Hull outlines are used only when the pass is off (Settings). Every prop, tree, post, and person has a soft blob shadow on the ground. Each time band adds a color grade on top (cold blue morning, chalk midday, rust evening, ink night; slate in rain). Tree canopies and grass tufts sway in a vertex-shader wind; the near sea is a displaced mesh with faceted waves and a foam line at the quay. Travel happens through an admiralty chart (M). Every area also has a visible exit: a lit signpost with an "Exit" tag (two on Main street, one each at the harbor, the cliff path, the woods path, the shop door, and the house's front door) that opens the chart when you use it. Only Aksel's boat has no post; you ask Aksel to turn back.</p>
 <ul>
 <li><strong>Grandfather's house</strong> (interior). Bed, kitchen table with the letter and notebook, cupboard, camera bag, print shelf, basement door (darkroom), attic stair (nailed shut), front door. A wall clock shows the game time.</li>
-<li><strong>Main street.</strong> Diner (Sigrún), the Courier (Halldór), school, houses, the church with an over-tall spire. Street lamps at night. A dog with one white ear by day. The sedan and the Man from Attention tier 1.</li>
-<li><strong>Harbor.</strong> Quay with lamp posts, Aksel's boat, a moored boat, the ferry, Marit's shop door, the harbor road. The sedan after the first front page.</li>
+<li><strong>Main street.</strong> A cobbled road (3,360 instanced stones), low stone walls with grass along both sides, benches, bins, barrels, crates, a hand cart, chimneys with smoke, lit window panes at dusk. Diner (Sigrún), the Courier (Halldór), school, houses, the church with an over-tall spire. Street lamps at night. A dog with one white ear by day. The sedan and the Man from Attention tier 1.</li>
+<li><strong>Harbor.</strong> Quay with lamp posts, bollards, crates, barrels, net piles, lobster pots, a winch, a bench, moving water with foam, Aksel's boat, a moored boat, the ferry, Marit's shop door, the harbor road. The sedan after the first front page.</li>
 <li><strong>Marit's shop</strong> (interior). Counter, shelves with turning item models. Trade happens at the counter through dialogue.</li>
-<li><strong>Lighthouse cliff.</strong> Plateau above the sea, the tower with a beam at dusk and night, rocks, a cairn of scratched stones, gulls, a fishing boat far out.</li>
-<li><strong>North woods.</strong> Instanced spruce forest, the base fence with signs, a searchlight tower that sweeps once at night.</li>
+<li><strong>Lighthouse cliff.</strong> Plateau with gentle terrain noise, seven hundred grass tufts, jittered boulders, a rope fence along the edge, a bench and a winch, above moving water, the tower with a beam at dusk and night, rocks, a cairn of scratched stones, gulls, a fishing boat far out.</li>
+<li><strong>North woods.</strong> Instanced spruce forest with wind, stumps, logs, rocks, ferns, the base fence with signs, a searchlight tower that sweeps once at night.</li>
 <li><strong>Aksel's boat.</strong> A moving deck at dusk or night along the base shore: hangar, fence, lights, searchlight. Reached through Aksel at trust 2.</li>
 </ul>
 <h2>4a. Weather</h2>
